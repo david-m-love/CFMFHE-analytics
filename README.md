@@ -1,47 +1,61 @@
 # CFMFHE Analytics
 
-An end-to-end coding platform where users enter text prompts and an AI agent generates full-stack applications in a sandboxed environment with live preview, file explorer, and command logs.
+A hosted, login-protected analytics dashboard for **Come Follow Me FHE**. It
+consolidates order & membership data from two stores (WooCommerce +
+Shopify), email/SMS (Klaviyo), and traffic (GA4) into one place, with an
+AI "Ask Anything" interface powered by Claude.
 
-## Features
+> **Status: Phase 1 (Foundation) + Overview dashboard.** The app runs on a
+> built-in **sample dataset** until the live Google Sheets sync is connected;
+> Klaviyo, GA4, and the AI layer are stubbed as upcoming phases. Each data
+> source degrades gracefully ("source disconnected" / "sample data") rather
+> than crashing.
 
-- Multi-model support via AI Gateway (Claude, GPT, Grok)
-- Secure code execution with Vercel Sandbox
-- Real-time live preview of generated apps
-- File explorer for browsing project files
-- Command logs and error monitoring
-- One-click deploy to Vercel
+## Tech stack
 
-## Tech Stack
+- **Next.js 14** (App Router) · **TypeScript** · **Tailwind CSS**
+- **Recharts** for charts · **react-day-picker** for the date picker
+- **NextAuth** (credentials) for login · **Zustand** for filter state
+- **Google Sheets API**, **Klaviyo**, **GA4**, **Anthropic** clients (lib/)
 
-- [Next.js](https://nextjs.org) with Turbopack
-- [AI SDK](https://ai-sdk.dev) v6
-- [Vercel AI Gateway](https://vercel.com/docs/ai-gateway)
-- [Vercel Sandbox](https://vercel.com/docs/vercel-sandbox)
-- [Tailwind CSS](https://tailwindcss.com)
-- [shadcn/ui](https://ui.shadcn.com)
-
-## Getting Started
-
-### Run Locally
+## Getting started
 
 ```bash
 pnpm install
 pnpm dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open http://localhost:3000. In development a demo user is seeded:
+`admin@cfmfhe.com` / `cfmfhe-demo`. Configure real users via `DASHBOARD_USERS`
+(see `.env.example`).
 
-## Supported Models
+## Configuration
 
-- Claude Opus 4.6
-- Claude Sonnet 4.6
-- GPT-5.3 Codex
-- Grok 4.1 Reasoning
+Copy `.env.example` to `.env.local` and fill in what you have. Nothing is
+required to run on sample data except `NEXTAUTH_SECRET` for production. Live
+order data turns on automatically once the Google Sheets vars are set.
+
+Analysis thresholds, pricing, key dates, and the Google Sheets **column
+mapping** all live in `lib/config.ts` so they can be tuned without touching
+component code (the sheet headers are finalized once the sync setup completes).
+
+## What's built
+
+- Branded login + 30-day sessions, route protection via middleware
+- Sidebar nav, persistent **store filter** + **date-range picker** with quick
+  selects, custom calendar, and **compare mode** (previous period / year)
+- Order normalization, product classification, and free-trial detection
+- **Overview dashboard**: 7 KPI cards (with compare deltas), 12-month revenue
+  (new vs returning), new-vs-churned members with net line, and plan-mix donut
+- January seasonality is flagged on charts, not hidden
+
+## Roadmap
+
+See the project brief. Phases 2–6 add the Membership deep-dives (funnel,
+cohorts, LTV), Klaviyo & GA4 dashboards, the Products view, and the AI
+Ask-Anything layer.
 
 ## Deploy
 
-Click the deploy button above or run:
-
-```bash
-vc deploy
-```
+Deploys to Vercel (Next.js auto-detected; `vercel.json` included). Set the
+environment variables in the Vercel project, then deploy.
