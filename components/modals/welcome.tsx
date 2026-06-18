@@ -47,9 +47,14 @@ export function Welcome(props: {
           onClick={(event) => event.stopPropagation()}
         >
           <div className="p-6 space-y-4 ">
-            <h1 className="text-2xl sans-serif font-semibold tracking-tight mb-7">
-              CFMFHE Analytics
-            </h1>
+            <div className="mb-7">
+              <span className="block font-script text-primary text-5xl leading-none">
+                cfmfhe
+              </span>
+              <h1 className="mt-1 text-2xl font-serif font-semibold tracking-tight">
+                CFMFHE Analytics
+              </h1>
+            </div>
             <p className="text-base text-primary">
               This is a <strong>demo</strong> of an end-to-end coding platform
               where the user can enter text prompts, and the agent will create a
