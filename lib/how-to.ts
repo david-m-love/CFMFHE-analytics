@@ -74,6 +74,21 @@ export const GUIDES: Record<string, Guide> = {
       { title: 'Connect it here', detail: 'Connections → Google Analytics 4 → Connect. Paste the service-account email, the private key, and the Property ID, then Test & Save.' },
     ],
   },
+  'quickbooks-oauth': {
+    slug: 'quickbooks-oauth',
+    title: 'Connect QuickBooks Online',
+    intro:
+      'QuickBooks connects via OAuth: you create an app on Intuit’s developer site, paste its Client ID & Secret here, then click "Connect with QuickBooks" to authorize. Powers the CEO dashboard (cash balance, money in/out).',
+    estimate: '~10 minutes',
+    steps: [
+      { title: 'Create an Intuit app', detail: 'Go to developer.intuit.com → sign in → My Apps → Create an app → choose the QuickBooks Online Accounting scope.' },
+      { title: 'Copy keys', detail: 'In the app’s "Keys & credentials" (use the Production keys when you’re ready for live data), copy the Client ID and Client Secret.' },
+      { title: 'Add the redirect URI', detail: 'In the app settings, add this exact Redirect URI: https://cfmfhe-analytics.vercel.app/api/oauth/quickbooks/callback' },
+      { title: 'Save the keys here', detail: 'In this dashboard: Connections → QuickBooks Online → Connect. Paste the Client ID & Secret and click "Test & Save".' },
+      { title: 'Authorize', detail: 'Click "Connect with QuickBooks", sign in to Intuit, pick the company, and approve. You’ll come back here connected.' },
+      { title: 'View it', detail: 'Open the CEO dashboard to see cash balance and money in / money out.' },
+    ],
+  },
   'google-sheets': {
     slug: 'google-sheets',
     title: 'Connect Google Sheets (order data)',

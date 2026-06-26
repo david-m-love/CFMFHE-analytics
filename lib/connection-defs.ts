@@ -3,9 +3,16 @@
 // environment-variable fallback for each field (so existing env-based
 // config keeps working alongside in-app stored credentials).
 
-export type ConnId = 'sheets' | 'shopify' | 'klaviyo' | 'ga4' | 'anthropic'
+export type ConnId = 'sheets' | 'shopify' | 'klaviyo' | 'ga4' | 'anthropic' | 'quickbooks'
 
-export const CONNECTION_ORDER: ConnId[] = ['sheets', 'shopify', 'klaviyo', 'ga4', 'anthropic']
+export const CONNECTION_ORDER: ConnId[] = [
+  'sheets',
+  'shopify',
+  'klaviyo',
+  'ga4',
+  'anthropic',
+  'quickbooks',
+]
 
 export interface ConnField {
   key: string
@@ -19,6 +26,8 @@ export interface ConnDef {
   id: ConnId
   label: string
   description: string
+  /** apiKey = enter & save; oauth = save app keys, then authorize via redirect */
+  kind?: 'apiKey' | 'oauth'
   /** one-time setup hint shown in the editor */
   setup?: string
   /** slug of an in-app how-to guide (/how-to/[slug]) */
@@ -97,5 +106,22 @@ export const CONNECTION_DEFS: Record<ConnId, ConnDef> = {
     setup: 'Create an API key in the Anthropic console.',
     fields: [{ key: 'apiKey', label: 'API key', type: 'password', placeholder: 'sk-ant-…' }],
     env: { apiKey: 'ANTHROPIC_API_KEY' },
+  },
+  quickbooks: {
+    id: 'quickbooks',
+    label: 'QuickBooks Online',
+    description: 'Cash balance and money in / money out (CEO dashboard)',
+    kind: 'oauth',
+    setup:
+      'Create an app at developer.intuit.com, copy its Client ID & Secret, add this site’s callback URL as a Redirect URI, then save below and click "Connect with QuickBooks".',
+    docsSlug: 'quickbooks-oauth',
+    fields: [
+      { key: 'clientId', label: 'Client ID', type: 'text', placeholder: 'from your Intuit app' },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: 'from your Intuit app' },
+    ],
+    env: {
+      clientId: 'QB_CLIENT_ID',
+      clientSecret: 'QB_CLIENT_SECRET',
+    },
   },
 }

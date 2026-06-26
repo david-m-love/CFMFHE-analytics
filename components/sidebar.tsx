@@ -6,6 +6,7 @@ import { signOut, useSession } from 'next-auth/react'
 import {
   BarChart3,
   Bot,
+  Landmark,
   LayoutDashboard,
   LogOut,
   Mail,
@@ -19,6 +20,7 @@ import { cn } from '@/lib/utils'
 
 const NAV = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
+  { href: '/ceo', label: 'CEO', icon: Landmark },
   { href: '/membership', label: 'Membership', icon: TrendingUp },
   { href: '/products', label: 'Products', icon: Package },
   { href: '/email', label: 'Email & SMS', icon: Mail },

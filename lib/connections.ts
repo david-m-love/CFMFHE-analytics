@@ -3,6 +3,7 @@ import { JWT } from 'google-auth-library'
 import { type ConnId, CONNECTION_DEFS, CONNECTION_ORDER } from './connection-defs'
 import { credentialSource, resolveCredential } from './credentials'
 import { testShopify } from './shopify'
+import { quickbooksConnected } from './quickbooks'
 
 export type { ConnId } from './connection-defs'
 export { CONNECTION_ORDER } from './connection-defs'
@@ -183,12 +184,43 @@ async function testAnthropic(): Promise<ConnResult> {
   }
 }
 
+async function testQuickBooks(): Promise<ConnResult> {
+  const m = meta('quickbooks')
+  const source = await credentialSource('quickbooks')
+  const v = await resolveCredential('quickbooks')
+  if (!v.clientId || !v.clientSecret) {
+    return {
+      ...m,
+      status: 'not_configured',
+      source,
+      fix: 'Add your Intuit app Client ID & Secret, then click "Connect with QuickBooks".',
+      checkedAt: now(),
+    }
+  }
+  const r = await quickbooksConnected()
+  if (r.needsAuth) {
+    return {
+      ...m,
+      status: 'not_configured',
+      source,
+      detail: 'App keys saved — authorize to finish.',
+      fix: 'Click "Connect with QuickBooks" to authorize access.',
+      checkedAt: now(),
+    }
+  }
+  if (!r.ok) {
+    return { ...m, status: 'error', source, detail: r.error ?? 'Authorization failed.', fix: 'Reconnect QuickBooks.', checkedAt: now() }
+  }
+  return { ...m, status: 'connected', source, detail: 'Authorized.', checkedAt: now() }
+}
+
 const TESTS: Record<ConnId, () => Promise<ConnResult>> = {
   sheets: testSheets,
   shopify: testShopifyConn,
   klaviyo: testKlaviyo,
   ga4: testGa4,
   anthropic: testAnthropic,
+  quickbooks: testQuickBooks,
 }
 
 export async function testConnection(id: ConnId): Promise<ConnResult> {

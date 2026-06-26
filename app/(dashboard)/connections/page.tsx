@@ -384,8 +384,18 @@ function ConnectionEditor({
             </Button>
           </div>
         </div>
+        {def.kind === 'oauth' && (
+          <a
+            href={`/api/oauth/${def.id}/authorize`}
+            className="mt-3 flex w-full items-center justify-center rounded-md bg-accent-blue px-4 py-2 text-sm font-medium text-white hover:bg-[#335f8a]"
+          >
+            Connect with {def.label}
+          </a>
+        )}
         <p className="mt-2 font-mono text-[10px] text-text-3">
-          Keys are encrypted before storage and never shown again after saving.
+          {def.kind === 'oauth'
+            ? 'Save your app keys first, then authorize. Tokens are encrypted before storage.'
+            : 'Keys are encrypted before storage and never shown again after saving.'}
         </p>
       </div>
     </div>,
@@ -393,6 +403,6 @@ function ConnectionEditor({
   )
 }
 
-const SKELETON: ConnResult[] = (['sheets', 'shopify', 'klaviyo', 'ga4', 'anthropic'] as ConnId[]).map(
-  (id) => ({ id, label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' }),
-)
+const SKELETON: ConnResult[] = (
+  ['sheets', 'shopify', 'klaviyo', 'ga4', 'anthropic', 'quickbooks'] as ConnId[]
+).map((id) => ({ id, label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' }))
