@@ -7,7 +7,7 @@ import { HelpCircle, Lock, Plus, RefreshCw, Wrench, X } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CONNECTION_DEFS, type ConnId } from '@/lib/connection-defs'
+import { CONNECTION_DEFS, CONNECTION_ORDER, type ConnId } from '@/lib/connection-defs'
 import { useDashboard } from '@/store/dashboard'
 import { STORE_LABELS } from '@/types'
 import type { StoreSource } from '@/types'
@@ -403,6 +403,11 @@ function ConnectionEditor({
   )
 }
 
-const SKELETON: ConnResult[] = (
-  ['sheets', 'shopify', 'klaviyo', 'ga4', 'anthropic', 'quickbooks'] as ConnId[]
-).map((id) => ({ id, label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' }))
+const SKELETON: ConnResult[] = CONNECTION_ORDER.map((id) => ({
+  id,
+  label: '',
+  description: '',
+  status: 'not_configured',
+  source: 'none',
+  checkedAt: '',
+}))

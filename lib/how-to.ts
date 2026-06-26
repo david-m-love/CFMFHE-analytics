@@ -89,6 +89,38 @@ export const GUIDES: Record<string, Guide> = {
       { title: 'View it', detail: 'Open the CEO dashboard to see cash balance and money in / money out.' },
     ],
   },
+  'meta-ads': {
+    slug: 'meta-ads',
+    title: 'Connect Meta Ads (Facebook & Instagram)',
+    intro:
+      'Meta Ads connects via OAuth so Facebook/Instagram campaign spend flows into the CMO dashboard. You create an app on Meta for Developers, paste its App ID & Secret plus your Ad Account ID here, then click "Connect with Meta Ads" to authorize read-only access to ad insights.',
+    estimate: '~15 minutes',
+    steps: [
+      { title: 'Create a Meta app', detail: 'Go to developers.facebook.com → My Apps → Create App → choose "Other" → "Business" type. Name it "CFMFHE Analytics".' },
+      { title: 'Add the Marketing API', detail: 'In the app dashboard, find "Marketing API" and click "Set up". This grants access to ad insights (ads_read).' },
+      { title: 'Copy the App ID & Secret', detail: 'App settings → Basic. Copy the App ID and click "Show" to copy the App Secret.' },
+      { title: 'Add the redirect URI', detail: 'Add Facebook Login → Settings → "Valid OAuth Redirect URIs", add exactly: https://cfmfhe-analytics.vercel.app/api/oauth/meta/callback' },
+      { title: 'Find your Ad Account ID', detail: 'In Meta Ads Manager → Account dropdown (top-left). The ID looks like "act_1234567890" (or just the number).' },
+      { title: 'Save the keys here', detail: 'Connections → Meta Ads → Connect. Paste the App ID, App Secret, and Ad Account ID, then "Test & Save".' },
+      { title: 'Authorize', detail: 'Click "Connect with Meta Ads", log in, and approve the ads_read permission. You\'ll return here connected; spend appears on the CMO dashboard.' },
+    ],
+  },
+  'google-ads': {
+    slug: 'google-ads',
+    title: 'Connect Google Ads',
+    intro:
+      'Google Ads connects via OAuth and requires a Google Ads API "developer token". You create OAuth credentials in Google Cloud, request a developer token from your Google Ads account, paste everything here, then authorize. Search/Shopping/PMax spend then flows into the CMO dashboard.',
+    estimate: '~25 minutes (developer-token approval can take longer)',
+    steps: [
+      { title: 'Create OAuth credentials', detail: 'At console.cloud.google.com → APIs & Services → Credentials → Create Credentials → OAuth client ID → type "Web application". Copy the Client ID and Client Secret.' },
+      { title: 'Add the redirect URI', detail: 'On that OAuth client, under "Authorized redirect URIs" add exactly: https://cfmfhe-analytics.vercel.app/api/oauth/google_ads/callback' },
+      { title: 'Enable the Google Ads API', detail: 'In the same project, search for "Google Ads API" and click Enable.' },
+      { title: 'Get a developer token', detail: 'In your Google Ads account → Tools → API Center. Copy the developer token. A "test" token works against test accounts immediately; "basic access" (for live data) requires a short approval.' },
+      { title: 'Find your customer ID', detail: 'Top-right of the Google Ads UI — a 10-digit number like 123-456-7890. If you access it through a manager (MCC) account, note that ID too.' },
+      { title: 'Save the keys here', detail: 'Connections → Google Ads → Connect. Paste the Client ID/Secret, developer token, customer ID (and manager ID if applicable), then "Test & Save".' },
+      { title: 'Authorize', detail: 'Click "Connect with Google Ads", choose your Google account, and approve. You\'ll return here connected.' },
+    ],
+  },
   'google-sheets': {
     slug: 'google-sheets',
     title: 'Connect Google Sheets (order data)',

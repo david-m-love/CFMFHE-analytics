@@ -4,6 +4,7 @@ import { type ConnId, CONNECTION_DEFS, CONNECTION_ORDER } from './connection-def
 import { credentialSource, resolveCredential } from './credentials'
 import { testShopify } from './shopify'
 import { quickbooksConnected } from './quickbooks'
+import { adsConnected } from './ads'
 
 export type { ConnId } from './connection-defs'
 export { CONNECTION_ORDER } from './connection-defs'
@@ -214,6 +215,52 @@ async function testQuickBooks(): Promise<ConnResult> {
   return { ...m, status: 'connected', source, detail: 'Authorized.', checkedAt: now() }
 }
 
+async function testMetaAds(): Promise<ConnResult> {
+  const m = meta('meta')
+  const source = await credentialSource('meta')
+  const v = await resolveCredential('meta')
+  if (!v.appId || !v.appSecret || !v.adAccountId) {
+    return {
+      ...m,
+      status: 'not_configured',
+      source,
+      fix: 'Add your Meta App ID, App Secret, and Ad Account ID, then click "Connect with Meta Ads".',
+      checkedAt: now(),
+    }
+  }
+  const r = await adsConnected('meta')
+  if (r.needsAuth) {
+    return { ...m, status: 'not_configured', source, detail: 'App keys saved — authorize to finish.', fix: 'Click "Connect with Meta Ads" to authorize access.', checkedAt: now() }
+  }
+  if (!r.ok) {
+    return { ...m, status: 'error', source, detail: 'Authorization incomplete.', fix: 'Reconnect Meta Ads.', checkedAt: now() }
+  }
+  return { ...m, status: 'connected', source, detail: 'Authorized — pulling campaign spend.', checkedAt: now() }
+}
+
+async function testGoogleAds(): Promise<ConnResult> {
+  const m = meta('google_ads')
+  const source = await credentialSource('google_ads')
+  const v = await resolveCredential('google_ads')
+  if (!v.clientId || !v.clientSecret || !v.developerToken || !v.customerId) {
+    return {
+      ...m,
+      status: 'not_configured',
+      source,
+      fix: 'Add the OAuth Client ID/Secret, developer token, and customer ID, then click "Connect with Google Ads".',
+      checkedAt: now(),
+    }
+  }
+  const r = await adsConnected('google_ads')
+  if (r.needsAuth) {
+    return { ...m, status: 'not_configured', source, detail: 'Keys saved — authorize to finish.', fix: 'Click "Connect with Google Ads" to authorize access.', checkedAt: now() }
+  }
+  if (!r.ok) {
+    return { ...m, status: 'error', source, detail: 'Authorization incomplete.', fix: 'Reconnect Google Ads.', checkedAt: now() }
+  }
+  return { ...m, status: 'connected', source, detail: 'Authorized — pulling campaign spend.', checkedAt: now() }
+}
+
 const TESTS: Record<ConnId, () => Promise<ConnResult>> = {
   sheets: testSheets,
   shopify: testShopifyConn,
@@ -221,6 +268,8 @@ const TESTS: Record<ConnId, () => Promise<ConnResult>> = {
   ga4: testGa4,
   anthropic: testAnthropic,
   quickbooks: testQuickBooks,
+  meta: testMetaAds,
+  google_ads: testGoogleAds,
 }
 
 export async function testConnection(id: ConnId): Promise<ConnResult> {
