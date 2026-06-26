@@ -19,13 +19,13 @@ export const GUIDES: Record<string, Guide> = {
     slug: 'shopify-direct-api',
     title: 'Connect Shopify (direct API)',
     intro:
-      'This connects the Essential Conversations Shopify store directly via the Admin API so orders flow in live — no spreadsheet needed. You create a "custom app" in Shopify and copy the value labeled "Admin API access token". Shopify changed its token format, so this token may start with shpat_, shpss_, or atkn_ — the PREFIX DOES NOT MATTER and this dashboard does not check it. Just use whatever appears under "Admin API access token" (not the API key, which is a hex Client ID used only for OAuth).',
+      'This connects the Essential Conversations store via the Admin API so orders flow in live. Create the app from your STORE ADMIN (Settings → Apps and sales channels → Develop apps), NOT the Shopify Partners dashboard. After you Install it, Shopify reveals an "Admin API access token" — that is the value you paste here. The prefix (shpat_, etc.) does not matter and this dashboard does not check it; what matters is that it is the value under "Admin API access token", not the "API secret key" or "API key" (those are OAuth client credentials and will be rejected with a 401).',
     estimate: '~10 minutes',
     steps: [
       {
-        title: 'Open app development in Shopify',
+        title: 'Open app development in Shopify (store admin, NOT Partners)',
         detail:
-          'In your Shopify admin, go to Settings (bottom-left) → "Apps and sales channels" → click "Develop apps" (top-right). If prompted, click "Allow custom app development" and confirm.',
+          'In your Shopify STORE admin, go to Settings (bottom-left) → "Apps and sales channels" → click "Develop apps" (top-right). If prompted, click "Allow custom app development" and confirm. Do NOT use the Shopify Partners dashboard — a Partners app only gives an API key + secret and needs an OAuth flow, which is why you won\'t see a ready access token there.',
       },
       {
         title: 'Create a custom app',
