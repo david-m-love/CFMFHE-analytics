@@ -3,20 +3,12 @@ import type { CustomerType, DataEnvelope, Order, StoreSource } from '@/types'
 import { SHEET_MAPPING } from './config'
 import { buildOrder, normalizeCustomerType } from './orders'
 import { getMockOrders } from './mock-data'
+import { resolveCredential } from './credentials'
 
-function hasSheetsCredentials(): boolean {
-  return Boolean(
-    process.env.GOOGLE_SHEETS_CLIENT_EMAIL &&
-      process.env.GOOGLE_SHEETS_PRIVATE_KEY &&
-      (process.env.GOOGLE_SHEETS_WOOCOMMERCE_SHEET_ID ||
-        process.env.GOOGLE_SHEETS_SHOPIFY_SHEET_ID),
-  )
-}
-
-function sheetsClient() {
+function sheetsClient(clientEmail: string, privateKey: string) {
   const auth = new google.auth.JWT({
-    email: process.env.GOOGLE_SHEETS_CLIENT_EMAIL,
-    key: process.env.GOOGLE_SHEETS_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+    email: clientEmail,
+    key: privateKey.replace(/\\n/g, '\n'),
     scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
   })
   return google.sheets({ version: 'v4', auth })
@@ -80,7 +72,10 @@ function rowsToOrders(
  * "disconnected" status on hard failures rather than crashing.
  */
 export async function getOrders(): Promise<DataEnvelope<Order[]>> {
-  if (!hasSheetsCredentials()) {
+  const cred = await resolveCredential('sheets')
+  const wooId = cred.woocommerceSheetId
+  const shopId = cred.shopifySheetId
+  if (!cred.clientEmail || !cred.privateKey || (!wooId && !shopId)) {
     return {
       status: 'mock',
       updatedAt: null,
@@ -90,10 +85,9 @@ export async function getOrders(): Promise<DataEnvelope<Order[]>> {
   }
 
   try {
-    const sheets = sheetsClient()
+    const sheets = sheetsClient(cred.clientEmail, cred.privateKey)
     const all: Order[] = []
 
-    const wooId = process.env.GOOGLE_SHEETS_WOOCOMMERCE_SHEET_ID
     if (wooId) {
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: wooId,
@@ -108,7 +102,6 @@ export async function getOrders(): Promise<DataEnvelope<Order[]>> {
       )
     }
 
-    const shopId = process.env.GOOGLE_SHEETS_SHOPIFY_SHEET_ID
     if (shopId) {
       const res = await sheets.spreadsheets.values.get({
         spreadsheetId: shopId,

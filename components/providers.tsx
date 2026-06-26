@@ -1,7 +1,12 @@
 'use client'
 
+import { SessionProvider } from 'next-auth/react'
 import { OrdersProvider } from '@/lib/use-orders'
 
 export function Providers({ children }: { children: React.ReactNode }) {
-  return <OrdersProvider>{children}</OrdersProvider>
+  return (
+    <SessionProvider>
+      <OrdersProvider>{children}</OrdersProvider>
+    </SessionProvider>
+  )
 }

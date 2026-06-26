@@ -1,55 +1,66 @@
 'use client'
 
 import { useCallback, useEffect, useState } from 'react'
-import { RefreshCw, Wrench } from 'lucide-react'
+import { createPortal } from 'react-dom'
+import { Lock, Plus, RefreshCw, Wrench, X } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { CONNECTION_DEFS, type ConnId } from '@/lib/connection-defs'
 import { cn } from '@/lib/utils'
 
 type ConnStatus = 'connected' | 'not_configured' | 'error'
 
 interface ConnResult {
-  id: string
+  id: ConnId
   label: string
   description: string
   status: ConnStatus
   detail?: string
   fix?: string
+  source: 'stored' | 'env' | 'none'
   checkedAt: string
 }
 
-const STATUS_META: Record<
-  ConnStatus,
-  { label: string; dot: string; text: string }
-> = {
+interface ApiResponse {
+  connections: ConnResult[]
+  secureMode: boolean
+  persistent: boolean
+}
+
+const STATUS_META: Record<ConnStatus, { label: string; dot: string; text: string }> = {
   connected: { label: 'Connected', dot: 'bg-accent-green', text: 'text-accent-green' },
   not_configured: { label: 'Not connected', dot: 'bg-text-3', text: 'text-text-3' },
   error: { label: 'Needs repair', dot: 'bg-accent-red', text: 'text-accent-red' },
 }
 
 function StatusDot({ status }: { status: ConnStatus }) {
-  const m = STATUS_META[status]
   return (
     <span className="relative inline-flex h-2.5 w-2.5">
       {status === 'connected' && (
         <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-accent-green opacity-60" />
       )}
-      <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', m.dot)} />
+      <span className={cn('relative inline-flex h-2.5 w-2.5 rounded-full', STATUS_META[status].dot)} />
     </span>
   )
 }
 
 export default function ConnectionsPage() {
   const [results, setResults] = useState<ConnResult[]>([])
+  const [secureMode, setSecureMode] = useState(false)
+  const [persistent, setPersistent] = useState(false)
   const [loadingAll, setLoadingAll] = useState(true)
   const [testingId, setTestingId] = useState<string | null>(null)
+  const [editorId, setEditorId] = useState<ConnId | null>(null)
 
-  const testAll = useCallback(async () => {
+  const load = useCallback(async () => {
     setLoadingAll(true)
     try {
       const res = await fetch('/api/connections', { cache: 'no-store' })
-      setResults(await res.json())
+      const data: ApiResponse = await res.json()
+      setResults(data.connections)
+      setSecureMode(data.secureMode)
+      setPersistent(data.persistent)
     } finally {
       setLoadingAll(false)
     }
@@ -59,7 +70,8 @@ export default function ConnectionsPage() {
     setTestingId(id)
     try {
       const res = await fetch(`/api/connections?source=${id}`, { cache: 'no-store' })
-      const [updated] = (await res.json()) as ConnResult[]
+      const data: ApiResponse = await res.json()
+      const updated = data.connections[0]
       setResults((prev) => prev.map((r) => (r.id === id ? updated : r)))
     } finally {
       setTestingId(null)
@@ -67,11 +79,12 @@ export default function ConnectionsPage() {
   }, [])
 
   useEffect(() => {
-    testAll()
-  }, [testAll])
+    load()
+  }, [load])
 
   const connected = results.filter((r) => r.status === 'connected').length
   const broken = results.filter((r) => r.status === 'error').length
+  const editing = editorId ? results.find((r) => r.id === editorId) ?? null : null
 
   return (
     <>
@@ -88,17 +101,24 @@ export default function ConnectionsPage() {
             <>
               <span className="font-medium text-ink">{connected}</span> of{' '}
               <span className="font-medium text-ink">{results.length}</span> connected
-              {broken > 0 && (
-                <span className="ml-2 text-accent-red">· {broken} need repair</span>
-              )}
+              {broken > 0 && <span className="ml-2 text-accent-red">· {broken} need repair</span>}
             </>
           )}
         </p>
-        <Button variant="outline" onClick={testAll} disabled={loadingAll}>
+        <Button variant="outline" onClick={load} disabled={loadingAll}>
           <RefreshCw size={14} className={cn(loadingAll && 'animate-spin')} />
           Test all
         </Button>
       </div>
+
+      {!secureMode && !loadingAll && <SecureModeNotice />}
+      {secureMode && !persistent && (
+        <div className="mb-4 flex items-center gap-2 rounded-md border border-[#ecdcc2] bg-[#f6eddf] px-3 py-2 text-xs text-accent-amber">
+          <Wrench size={14} className="shrink-0" />
+          Secure mode is on, but no database is connected — saved credentials won't survive a
+          restart until you add Vercel KV (KV_REST_API_URL / KV_REST_API_TOKEN).
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-3 lg:grid-cols-2">
         {(results.length ? results : SKELETON).map((r, i) => {
@@ -116,9 +136,7 @@ export default function ConnectionsPage() {
                     <p className="mt-0.5 text-sm text-text-2">{r.description}</p>
                   </div>
                   {!skeleton && (
-                    <span className={cn('shrink-0 font-mono text-xs', meta.text)}>
-                      {meta.label}
-                    </span>
+                    <span className={cn('shrink-0 font-mono text-xs', meta.text)}>{meta.label}</span>
                   )}
                 </div>
 
@@ -133,22 +151,27 @@ export default function ConnectionsPage() {
                     )}
                     <div className="flex items-center justify-between pt-1">
                       <span className="font-mono text-[10px] text-text-3">
-                        {r.checkedAt
-                          ? `Checked ${new Date(r.checkedAt).toLocaleTimeString('en-US')}`
-                          : ''}
+                        {r.source === 'stored' && 'Saved in app · '}
+                        {r.source === 'env' && 'From env · '}
+                        {r.checkedAt ? `Checked ${new Date(r.checkedAt).toLocaleTimeString('en-US')}` : ''}
                       </span>
-                      <Button
-                        variant="ghost"
-                        onClick={() => testOne(r.id)}
-                        disabled={testingId === r.id}
-                        className="text-xs"
-                      >
-                        <RefreshCw
-                          size={12}
-                          className={cn(testingId === r.id && 'animate-spin')}
-                        />
-                        {r.status === 'error' ? 'Retry' : 'Test'}
-                      </Button>
+                      <div className="flex gap-1">
+                        {secureMode && (
+                          <Button variant="ghost" onClick={() => setEditorId(r.id)} className="text-xs">
+                            <Plus size={12} />
+                            {r.source === 'stored' ? 'Edit' : 'Connect'}
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          onClick={() => testOne(r.id)}
+                          disabled={testingId === r.id}
+                          className="text-xs"
+                        >
+                          <RefreshCw size={12} className={cn(testingId === r.id && 'animate-spin')} />
+                          {r.status === 'error' ? 'Retry' : 'Test'}
+                        </Button>
+                      </div>
                     </div>
                   </div>
                 )}
@@ -158,18 +181,156 @@ export default function ConnectionsPage() {
         })}
       </div>
 
-      <p className="mt-5 max-w-2xl text-xs text-text-3">
-        This page only <em>tests</em> connections — it doesn’t store any keys yet.
-        In-app credential entry (so you never open Vercel) is the next step, and
-        it’ll come with a login to keep your keys and data private.
-      </p>
+      {editing && (
+        <ConnectionEditor
+          result={editing}
+          onClose={() => setEditorId(null)}
+          onSaved={(updated) => {
+            setResults((prev) => prev.map((r) => (r.id === updated.id ? updated : r)))
+            setEditorId(null)
+          }}
+        />
+      )}
     </>
   )
 }
 
+function SecureModeNotice() {
+  return (
+    <Card className="mb-4">
+      <CardBody className="pt-4">
+        <div className="flex items-center gap-2">
+          <Lock size={16} className="text-accent-blue" />
+          <span className="font-serif text-lg text-ink">Enable in-app credentials</span>
+        </div>
+        <p className="mt-2 text-sm text-text-2">
+          This page tests connections now. To <strong>enter and save API keys here</strong> (no
+          Vercel needed afterward), turn on secure mode by setting these in your Vercel project:
+        </p>
+        <ul className="mt-2 space-y-1 font-mono text-xs text-text-2">
+          <li>• <strong>NEXTAUTH_SECRET</strong> — random string (openssl rand -base64 32)</li>
+          <li>• <strong>NEXTAUTH_URL</strong> — your site URL</li>
+          <li>• <strong>DASHBOARD_USERS</strong> — turns on login (Name|email|password,…)</li>
+          <li>• <strong>APP_ENCRYPTION_KEY</strong> — random string; encrypts saved keys</li>
+          <li>• <strong>KV_REST_API_URL / KV_REST_API_TOKEN</strong> — Vercel KV, so saves persist</li>
+        </ul>
+        <p className="mt-2 text-xs text-text-3">
+          Until then the app stays open (no login) and runs on sample data.
+        </p>
+      </CardBody>
+    </Card>
+  )
+}
+
+function ConnectionEditor({
+  result,
+  onClose,
+  onSaved,
+}: {
+  result: ConnResult
+  onClose: () => void
+  onSaved: (r: ConnResult) => void
+}) {
+  const def = CONNECTION_DEFS[result.id]
+  const [fields, setFields] = useState<Record<string, string>>({})
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  async function submit(action: 'save' | 'clear') {
+    setSaving(true)
+    setError('')
+    try {
+      const res = await fetch('/api/connections/save', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ id: result.id, action, fields }),
+      })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error ?? 'Something went wrong.')
+        return
+      }
+      onSaved(data.result as ConnResult)
+    } catch {
+      setError('Network error.')
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  if (typeof document === 'undefined') return null
+  return createPortal(
+    <div className="fixed inset-0 z-[60]">
+      <button aria-label="Close" className="absolute inset-0 bg-black/40" onClick={onClose} />
+      <div className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-2xl bg-card p-4 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[520px] sm:max-w-[92vw] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
+        <div className="mb-2 flex items-center justify-between">
+          <h2 className="font-serif text-lg text-ink">Connect {def.label}</h2>
+          <button onClick={onClose} className="rounded-md p-1 text-text-3 hover:bg-paper" aria-label="Close">
+            <X size={18} />
+          </button>
+        </div>
+        {def.setup && <p className="mb-3 rounded-md bg-paper px-3 py-2 text-xs text-text-2">{def.setup}</p>}
+
+        <div className="space-y-3">
+          {def.fields.map((f) => (
+            <div key={f.key}>
+              <label className="mb-1 block text-xs font-medium text-text-2">{f.label}</label>
+              {f.type === 'textarea' ? (
+                <textarea
+                  rows={3}
+                  value={fields[f.key] ?? ''}
+                  onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 font-mono text-xs outline-none focus:border-accent-blue"
+                />
+              ) : (
+                <input
+                  type={f.type === 'password' ? 'password' : 'text'}
+                  value={fields[f.key] ?? ''}
+                  onChange={(e) => setFields((p) => ({ ...p, [f.key]: e.target.value }))}
+                  placeholder={f.placeholder}
+                  className="w-full rounded-md border border-border bg-white px-3 py-2 text-sm outline-none focus:border-accent-blue"
+                />
+              )}
+            </div>
+          ))}
+        </div>
+
+        {error && <p className="mt-3 text-xs text-accent-red">{error}</p>}
+
+        <div className="mt-4 flex items-center justify-between gap-2 border-t border-border pt-3">
+          {result.source === 'stored' ? (
+            <button
+              onClick={() => submit('clear')}
+              disabled={saving}
+              className="text-xs text-accent-red hover:underline"
+            >
+              Disconnect
+            </button>
+          ) : (
+            <span />
+          )}
+          <div className="flex gap-2">
+            <button onClick={onClose} className="rounded-md px-3 py-2 text-sm text-text-2 hover:bg-paper">
+              Cancel
+            </button>
+            <Button onClick={() => submit('save')} disabled={saving}>
+              {saving ? 'Testing…' : 'Test & Save'}
+            </Button>
+          </div>
+        </div>
+        <p className="mt-2 font-mono text-[10px] text-text-3">
+          Keys are encrypted before storage and never shown again after saving.
+        </p>
+      </div>
+    </div>,
+    document.body,
+  )
+}
+
 const SKELETON: ConnResult[] = [
-  { id: 's1', label: '', description: '', status: 'not_configured', checkedAt: '' },
-  { id: 's2', label: '', description: '', status: 'not_configured', checkedAt: '' },
-  { id: 's3', label: '', description: '', status: 'not_configured', checkedAt: '' },
-  { id: 's4', label: '', description: '', status: 'not_configured', checkedAt: '' },
+  { id: 'sheets', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
+  { id: 'klaviyo', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
+  { id: 'ga4', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
+  { id: 'anthropic', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
 ]

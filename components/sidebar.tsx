@@ -2,10 +2,12 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { signOut, useSession } from 'next-auth/react'
 import {
   BarChart3,
   Bot,
   LayoutDashboard,
+  LogOut,
   Mail,
   Package,
   PlugZap,
@@ -26,6 +28,7 @@ const NAV = [
 
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
+  const { data: session } = useSession()
 
   return (
     <aside className="flex h-full w-full flex-col bg-ink text-white">
@@ -60,10 +63,25 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
           })}
         </ul>
       </nav>
-      <div className="border-t border-white/10 px-5 py-3">
-        <p className="font-mono text-[10px] uppercase tracking-wider text-white/40">
-          Come Follow Me FHE
-        </p>
+      <div className="border-t border-white/10 px-3 py-3">
+        {session?.user ? (
+          <>
+            <div className="px-2 pb-2 text-xs text-white/50">
+              {session.user.name ?? session.user.email}
+            </div>
+            <button
+              onClick={() => signOut({ callbackUrl: '/login' })}
+              className="flex w-full items-center gap-2.5 rounded-md px-3 py-2 text-sm text-white/65 transition-colors hover:bg-white/5 hover:text-white"
+            >
+              <LogOut size={16} />
+              Sign out
+            </button>
+          </>
+        ) : (
+          <p className="px-2 font-mono text-[10px] uppercase tracking-wider text-white/40">
+            Come Follow Me FHE
+          </p>
+        )}
       </div>
     </aside>
   )
