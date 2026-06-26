@@ -37,7 +37,10 @@ function rowsToOrders(
   const iId = idx(c.orderId)
   const iStatus = idx(c.status)
   const iName = idx(c.customerName)
+  const iFirst = idx(c.customerFirstName ?? null)
+  const iLast = idx(c.customerLastName ?? null)
   const iType = idx(c.customerType)
+  const iCustOrders = idx(c.customerTotalOrders ?? null)
   const iProducts = idx(c.products)
   const iItems = idx(c.itemsSold)
   const iNet = idx(c.netSales)
@@ -50,22 +53,42 @@ function rowsToOrders(
     const row = rows[r]
     if (!row || row.length === 0) continue
     const rawDate = row[iDate] ?? ''
-    const date = new Date(rawDate).toISOString().slice(0, 10)
-    const customerType: CustomerType =
+    const parsed = new Date(rawDate)
+    if (isNaN(parsed.getTime())) continue // skip rows without a usable date
+    const date = parsed.toISOString().slice(0, 10)
+
+    // Customer type: explicit column → else derive from lifetime order count
+    // (1 = first-ever purchase = new). Email identity refines this business-wide.
+    let customerType: CustomerType =
       iType >= 0 ? normalizeCustomerType(row[iType]) : 'unknown'
+    if (customerType === 'unknown' && iCustOrders >= 0) {
+      const n = parseInt((row[iCustOrders] ?? '').replace(/[^0-9]/g, ''), 10)
+      if (n === 1) customerType = 'new'
+      else if (n > 1) customerType = 'returning'
+    }
+
+    // Name: explicit column → else assemble from first + last.
+    let customerName = (iName >= 0 ? row[iName] : '') || ''
+    if (!customerName && (iFirst >= 0 || iLast >= 0)) {
+      customerName = [iFirst >= 0 ? row[iFirst] : '', iLast >= 0 ? row[iLast] : '']
+        .filter(Boolean)
+        .join(' ')
+        .trim()
+    }
+
     const net = parseFloat((row[iNet] ?? '0').replace(/[^0-9.-]/g, '')) || 0
     orders.push(
       buildOrder({
-        id: `${source}-${row[iId] ?? r}`,
+        id: `${source}-${row[iId] ?? r}-${r}`,
         source,
         date,
-        customerName: row[iName] ?? 'Unknown',
+        customerName: customerName || 'Unknown',
         customerType,
         email: iEmail >= 0 ? (row[iEmail] || null) : null,
         productNames: (row[iProducts] ?? '').split(/[,;]/).map((s) => s.trim()).filter(Boolean),
         itemsSold: parseInt(row[iItems] ?? '1', 10) || 1,
         netSales: net,
-        status: row[iStatus] ?? '',
+        status: iStatus >= 0 ? (row[iStatus] ?? '') : 'Completed',
         coupon: iCoupon >= 0 ? (row[iCoupon] || null) : null,
         attribution: iAttr >= 0 ? (row[iAttr] || null) : null,
       }),

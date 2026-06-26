@@ -59,25 +59,53 @@ export const JANUARY_ANOMALY_NOTE =
   'January is seasonally elevated (New Year Come Follow Me campaign) and is not representative of baseline.'
 
 /**
- * Configurable column mapping for the Google Sheets data layer.
- * Sheet tab names + headers are confirmed once Zach completes setup
- * (EOW 2026-06-20). Adjust here without code changes.
+ * Configurable column mapping for the Google Sheets data layer. Header names
+ * match the live WooCommerce export ("New WooCommerce Orders | CFMFHE",
+ * tab "Completed Orders") — a line-item-level export. Null = column absent;
+ * customerName can be assembled from first/last name; status defaults to
+ * "Completed" when there's no status column; customerType is derived from
+ * lifetime order count (and, business-wide, from email identity).
  */
-export const SHEET_MAPPING = {
+export interface SheetColumnMap {
+  date: string | null
+  orderId: string | null
+  status: string | null
+  customerName: string | null
+  customerFirstName?: string | null
+  customerLastName?: string | null
+  customerType: string | null
+  customerTotalOrders?: string | null
+  products: string | null
+  itemsSold: string | null
+  netSales: string | null
+  coupon: string | null
+  attribution: string | null
+  email: string | null
+}
+
+export interface SheetSourceMap {
+  tab: string
+  columns: SheetColumnMap
+}
+
+export const SHEET_MAPPING: { woocommerce: SheetSourceMap; shopify: SheetSourceMap } = {
   woocommerce: {
     tab: 'Completed Orders',
     columns: {
-      date: 'Date',
-      orderId: 'Order #',
-      status: 'Status',
-      customerName: 'Customer Name',
-      customerType: 'Customer Type',
-      products: 'Product(s)',
-      itemsSold: 'Items Sold',
-      netSales: 'Net Sales',
-      coupon: 'Coupon(s)',
-      attribution: 'Attribution',
-      email: null, // WooCommerce export has no email
+      date: 'Created Date',
+      orderId: 'Order Id',
+      status: null, // no status column; the "Completed Orders" tab is all complete
+      customerName: null, // assembled from first + last below
+      customerFirstName: 'Billing First name',
+      customerLastName: 'Billing Last Name',
+      customerType: null, // derived from Customer Total orders + email identity
+      customerTotalOrders: 'Customer Total orders',
+      products: 'Product Name',
+      itemsSold: 'Product Quantity',
+      netSales: 'Product Total', // line-item revenue (avoids double-counting order totals)
+      coupon: 'Coupons Codes',
+      attribution: 'UTM Source',
+      email: 'Email',
     },
   },
   shopify: {
@@ -96,4 +124,4 @@ export const SHEET_MAPPING = {
       email: 'Email',
     },
   },
-} as const
+}
