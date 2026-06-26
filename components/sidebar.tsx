@@ -10,6 +10,7 @@ import {
   LayoutDashboard,
   LogOut,
   Mail,
+  Megaphone,
   Package,
   PlugZap,
   TrendingUp,
@@ -21,6 +22,7 @@ import { cn } from '@/lib/utils'
 const NAV = [
   { href: '/', label: 'Overview', icon: LayoutDashboard },
   { href: '/ceo', label: 'CEO', icon: Landmark },
+  { href: '/cmo', label: 'CMO', icon: Megaphone },
   { href: '/membership', label: 'Membership', icon: TrendingUp },
   { href: '/products', label: 'Products', icon: Package },
   { href: '/email', label: 'Email & SMS', icon: Mail },

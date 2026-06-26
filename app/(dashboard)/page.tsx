@@ -144,8 +144,8 @@ export default function OverviewPage() {
                 <Card key={label} className="p-4">
                   <div className="font-mono text-[11px] uppercase tracking-wide text-text-3">{label}</div>
                   <div className="mt-1.5 font-mono text-2xl text-text-3">—</div>
-                  <Link href="/connections" className="mt-1 inline-block text-xs text-accent-blue hover:underline">
-                    Connect ad accounts →
+                  <Link href="/cmo" className="mt-1 inline-block text-xs text-accent-blue hover:underline">
+                    Open CMO dashboard →
                   </Link>
                 </Card>
               ))}
