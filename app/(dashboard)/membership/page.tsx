@@ -1,16 +1,16 @@
 import { PageHeader } from '@/components/page-header'
 import { MembershipTabs } from '@/components/membership/MembershipTabs'
-import { MembershipFunnel } from '@/components/membership/MembershipFunnel'
+import { MembershipOverview } from '@/components/membership/MembershipOverview'
 
 export default function MembershipPage() {
   return (
     <>
       <PageHeader
         title="Membership"
-        description="The acquisition & retention funnel — from reach to long-term members."
+        description="Membership health at a glance — members, MRR, and plan mix."
       />
       <MembershipTabs />
-      <MembershipFunnel />
+      <MembershipOverview />
     </>
   )
 }
