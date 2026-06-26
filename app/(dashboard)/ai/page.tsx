@@ -7,6 +7,7 @@ export default function AiPage() {
       <PageHeader
         title="Ask Anything"
         description="Natural-language questions answered over your live data, powered by Claude."
+        showSource={false}
       />
       <ComingSoon
         phase="Phase 5"

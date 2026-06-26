@@ -91,6 +91,7 @@ export default function ConnectionsPage() {
       <PageHeader
         title="Connections"
         description="Live status of every data source. Green means it's firing; red means it needs repair."
+        showSource={false}
       />
 
       <div className="mb-4 flex items-center justify-between">

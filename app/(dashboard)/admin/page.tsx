@@ -78,7 +78,7 @@ export default function AdminPage() {
   if (forbidden) {
     return (
       <>
-        <PageHeader title="Team" />
+        <PageHeader title="Team" showSource={false} />
         <Card>
           <CardBody className="pt-5 text-sm text-text-2">
             This area is for admins only.
@@ -90,7 +90,7 @@ export default function AdminPage() {
 
   return (
     <>
-      <PageHeader title="Team" description="Manage who can access the dashboard." />
+      <PageHeader title="Team" description="Manage who can access the dashboard." showSource={false} />
 
       <div className="grid grid-cols-1 gap-4 lg:grid-cols-[1fr_340px]">
         <Card>

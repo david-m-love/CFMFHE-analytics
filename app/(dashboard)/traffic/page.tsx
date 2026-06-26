@@ -75,7 +75,7 @@ export default function TrafficPage() {
 
   return (
     <>
-      <PageHeader title="Traffic" description="Website sessions, sources, and the /join-us path (GA4)." />
+      <PageHeader title="Traffic" description="Website sessions, sources, and the /join-us path (GA4)." showSource={false} />
 
       {status !== 'connected' && !loading && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-[#ecdcc2] bg-[#f6eddf] px-3 py-2 text-xs text-accent-amber">

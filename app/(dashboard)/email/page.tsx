@@ -7,6 +7,7 @@ export default function EmailPage() {
       <PageHeader
         title="Email & SMS"
         description="Klaviyo subscriber growth, flows, and campaigns."
+        showSource={false}
       />
       <ComingSoon
         phase="Phase 4"
