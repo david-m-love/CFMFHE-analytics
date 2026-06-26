@@ -6,7 +6,7 @@ import { resolveCredential } from './credentials'
 
 const BASE = 'https://a.klaviyo.com/api'
 const REVISION = '2024-10-15'
-const MAX_PROFILE_PAGES = 20 // cap paging at ~2,000 most-recent profiles
+const MAX_PROFILE_PAGES = 30 // cap paging at ~3,000 most-recent profiles
 
 export interface ListCount {
   name: string
@@ -111,9 +111,10 @@ export async function getKlaviyoOverview(
   const newContacts = monthly
     .filter((m) => m.month >= fromM && m.month <= toM)
     .reduce((s, m) => s + m.count, 0)
-  const monthsWithData = monthly.filter((m) => m.count > 0).length || 1
-  const newPerMonthAvg = Math.round(monthly.reduce((s, m) => s + m.count, 0) / monthsWithData)
-  const prior = Math.max(1, totalContacts - newContacts)
+  const newPerMonthAvg = Math.round(monthly.reduce((s, m) => s + m.count, 0) / monthly.length)
+  // Growth % only makes sense with a known total; guard against divide-by-tiny.
+  const prior = totalContacts - newContacts
+  const growthRatePct = totalContacts > 0 && prior > 0 ? round(newContacts / prior) : 0
 
   return {
     status: problems.length ? 'disconnected' : 'connected',
@@ -122,7 +123,7 @@ export async function getKlaviyoOverview(
       totalContacts,
       newContacts,
       newPerMonthAvg,
-      growthRatePct: round(newContacts / prior),
+      growthRatePct,
       monthly,
       lists,
       capped,
@@ -131,18 +132,44 @@ export async function getKlaviyoOverview(
   }
 }
 
-/** Lists and their profile counts. */
+/**
+ * Lists and their profile counts. Enumerate first (always works), then enrich
+ * with profile_count per list via the single-list endpoint — the collection
+ * endpoint rejects additional-fields[list]=profile_count with a 400, but the
+ * single-list endpoint accepts it. Per-list count failures are tolerated.
+ */
 async function fetchLists(apiKey: string): Promise<ListCount[]> {
-  const res = await fetch(`${BASE}/lists/?additional-fields[list]=profile_count`, {
-    headers: headers(apiKey),
-  })
+  const res = await fetch(`${BASE}/lists/`, { headers: headers(apiKey) })
   if (!res.ok) throw new Error(`lists ${res.status}`)
   const json = (await res.json()) as {
-    data?: { attributes?: { name?: string; profile_count?: number } }[]
+    data?: { id?: string; attributes?: { name?: string } }[]
   }
-  return (json.data ?? [])
-    .map((l) => ({ name: l.attributes?.name ?? 'List', count: l.attributes?.profile_count ?? 0 }))
-    .sort((a, b) => b.count - a.count)
+  const base = (json.data ?? []).map((l) => ({
+    id: l.id ?? '',
+    name: l.attributes?.name ?? 'List',
+  }))
+
+  const withCounts = await Promise.all(
+    base.slice(0, 25).map(async (l) => {
+      let count = 0
+      if (l.id) {
+        try {
+          const r = await fetch(
+            `${BASE}/lists/${l.id}/?additional-fields[list]=profile_count`,
+            { headers: headers(apiKey) },
+          )
+          if (r.ok) {
+            const j = (await r.json()) as { data?: { attributes?: { profile_count?: number } } }
+            count = j.data?.attributes?.profile_count ?? 0
+          }
+        } catch {
+          /* tolerate — leave count at 0 */
+        }
+      }
+      return { name: l.name, count }
+    }),
+  )
+  return withCounts.sort((a, b) => b.count - a.count)
 }
 
 /**

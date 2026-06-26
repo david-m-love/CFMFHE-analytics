@@ -52,7 +52,7 @@ export function EmailDashboard() {
           value={data.newContacts}
           format="number"
           hint="selected period"
-          secondaryValue={data.growthRatePct}
+          secondaryValue={data.totalContacts > 0 ? data.growthRatePct : undefined}
           secondaryFormat="percent"
           secondaryLabel="list growth"
         />

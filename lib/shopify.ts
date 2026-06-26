@@ -31,8 +31,18 @@ export async function testShopify(
 ): Promise<{ ok: boolean; name?: string; status?: number; error?: string }> {
   try {
     const res = await shopifyFetch(`${baseUrl(domain)}/shop.json`, token)
-    if (res.status === 401 || res.status === 403) return { ok: false, status: res.status, error: 'Access token rejected.' }
-    if (!res.ok) return { ok: false, status: res.status, error: `Shopify returned ${res.status}.` }
+    if (!res.ok) {
+      const body = await res.text().catch(() => '')
+      const detail = body.slice(0, 140).replace(/\s+/g, ' ').trim()
+      if (res.status === 401 || res.status === 403) {
+        return {
+          ok: false,
+          status: res.status,
+          error: `Token rejected (${res.status}). ${detail || 'Check the token, that the app is installed, and that protected customer data access is granted.'}`,
+        }
+      }
+      return { ok: false, status: res.status, error: `Shopify returned ${res.status}. ${detail}`.trim() }
+    }
     const json = (await res.json()) as { shop?: { name?: string } }
     return { ok: true, name: json.shop?.name }
   } catch (e) {

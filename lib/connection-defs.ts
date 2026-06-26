@@ -76,7 +76,7 @@ export const CONNECTION_DEFS: Record<ConnId, ConnDef> = {
     docsSlug: 'shopify-direct-api',
     fields: [
       { key: 'storeDomain', label: 'Store domain', type: 'text', placeholder: 'your-store.myshopify.com' },
-      { key: 'accessToken', label: 'Admin API access token', type: 'password', placeholder: 'shpat_…' },
+      { key: 'accessToken', label: 'Admin API access token', type: 'password', placeholder: 'shpat_… / shpss_… / atkn_… (prefix doesn’t matter)' },
     ],
     env: {
       storeDomain: 'SHOPIFY_STORE_DOMAIN',

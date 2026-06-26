@@ -19,7 +19,7 @@ export const GUIDES: Record<string, Guide> = {
     slug: 'shopify-direct-api',
     title: 'Connect Shopify (direct API)',
     intro:
-      'This connects the Essential Conversations Shopify store directly via the Admin API so orders flow in live — no spreadsheet needed. You create a "custom app" in Shopify, copy its Admin API ACCESS TOKEN (starts with shpat_), and paste it here. Most connection problems come from pasting the wrong value: use the shpat_ token, NOT the "API secret key" (shpss_) or the "API key" (a hex string).',
+      'This connects the Essential Conversations Shopify store directly via the Admin API so orders flow in live — no spreadsheet needed. You create a "custom app" in Shopify and copy the value labeled "Admin API access token". Shopify changed its token format, so this token may start with shpat_, shpss_, or atkn_ — the PREFIX DOES NOT MATTER and this dashboard does not check it. Just use whatever appears under "Admin API access token" (not the API key, which is a hex Client ID used only for OAuth).',
     estimate: '~10 minutes',
     steps: [
       {
@@ -47,9 +47,9 @@ export const GUIDES: Record<string, Guide> = {
         detail: 'Go to the "API credentials" tab → click "Install app" → confirm Install. (The access token only appears AFTER installing.)',
       },
       {
-        title: 'Copy the Admin API ACCESS TOKEN (shpat_)',
+        title: 'Copy the Admin API access token',
         detail:
-          'Still on "API credentials", under "Admin API access token" click "Reveal token once" and copy it — it starts with "shpat_". ⚠️ This is NOT the "API secret key" (shpss_) or the "API key" (hex); those are for OAuth and won\'t work here. Shopify shows the token only once.',
+          'Still on "API credentials", under "Admin API access token" click "Reveal token once" and copy it. Depending on Shopify\'s token format it may start with shpat_, shpss_, or atkn_ — any of these is correct; the prefix doesn\'t matter. (The "API key" hex string and the "API secret key" are the OAuth Client ID/Secret — not used here.) Shopify shows the token only once.',
       },
       {
         title: 'Find your store domain',
@@ -59,7 +59,7 @@ export const GUIDES: Record<string, Guide> = {
       {
         title: 'Connect it here',
         detail:
-          'Connections → Shopify → Connect. Paste the store domain and the shpat_ access token, then "Test & Save". It should turn green and show your shop name. Errors: "Access token rejected" = wrong token / app not installed / protected data not granted; "returned 404" = wrong domain; green but few old orders = missing read_all_orders.',
+          'Connections → Shopify → Connect. Paste the store domain and the Admin API access token (any prefix), then "Test & Save". It should turn green and show your shop name. Errors: "Token rejected" = wrong value (use the Admin API access token, not the API key/secret) / app not installed / protected data not granted; "returned 404" = wrong domain; green but few old orders = missing read_all_orders.',
       },
     ],
   },
