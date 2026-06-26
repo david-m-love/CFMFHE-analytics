@@ -125,7 +125,7 @@ export const GUIDES: Record<string, Guide> = {
     slug: 'google-sheets',
     title: 'Connect Google Sheets (order data)',
     intro:
-      'Google Sheets doesn’t use a normal login. You create a "service account" — a robot Google account — download a key file for it, and then SHARE your spreadsheet with that robot’s email. Two steps trip most people up: (1) you must share the sheet with the service-account email, and (2) the tab inside the spreadsheet must be named exactly "woocommerce_orders" (and "shopify_orders"). The green Test can pass even when the tab name is wrong, so double-check it.',
+      'Google Sheets doesn’t use a normal login. You create a "service account" — a robot Google account — download a key file for it, and then SHARE your spreadsheet with that robot’s email. Two steps trip most people up: (1) you must share the sheet with the service-account email, and (2) the tab inside the spreadsheet must be named exactly "Completed Orders" (and "shopify_orders" for the Shopify tab). The green Test can pass even when the tab name is wrong, so double-check it.',
     estimate: '~15 minutes',
     steps: [
       { title: 'Create a Google Cloud project', detail: 'Go to console.cloud.google.com and sign in. Top-left project dropdown → New Project → name it "CFMFHE Analytics" → Create, then make sure it’s selected.' },
@@ -135,9 +135,9 @@ export const GUIDES: Record<string, Guide> = {
       { title: 'Copy two values from the JSON', detail: 'Open the .json in any text editor. Copy (a) "client_email" — looks like cfmfhe-sheets@…iam.gserviceaccount.com — and (b) "private_key" — the whole block from -----BEGIN PRIVATE KEY----- to -----END PRIVATE KEY-----, including the \\n parts. Paste it exactly as-is; the app handles the \\n.' },
       { title: '⭐ Share the spreadsheet with the robot (most-missed step)', detail: 'Open your Google Sheet → green Share button (top-right) → paste the client_email from the previous step → set it to Viewer → uncheck "Notify people" → Share/Done. If Woo and Shopify are in separate spreadsheets, do this on both.' },
       { title: 'Get the Sheet ID', detail: 'It’s the long code in the URL between /d/ and /edit: docs.google.com/spreadsheets/d/THIS_PART/edit.' },
-      { title: '⭐ Check the tab name', detail: 'At the bottom of the spreadsheet, the tab with WooCommerce orders must be named exactly "woocommerce_orders" (and "shopify_orders" if it’s in the same file). Right-click the tab → Rename if needed. Header row must match: Date, Order #, Status, Customer Name, Customer Type, Product(s), Items Sold, Net Sales, Coupon(s), Attribution, Email.' },
+      { title: '⭐ Check the tab name', detail: 'At the bottom of the spreadsheet, the tab with WooCommerce orders must be named exactly "Completed Orders" (and "shopify_orders" for the Shopify tab if it’s in the same file). Right-click the tab → Rename if needed. Header row must match: Date, Order #, Status, Customer Name, Customer Type, Product(s), Items Sold, Net Sales, Coupon(s), Attribution, Email.' },
       { title: 'Connect it here', detail: 'Connections → Google Sheets → Connect. Paste the service-account email, the private key, and the Sheet ID. If Woo + Shopify are two tabs in ONE spreadsheet, put the same Sheet ID in both fields. Click Test & Save — it should turn green.' },
-      { title: 'If it fails', detail: '403 / "caller does not have permission" = you didn’t share the sheet (step 6). "API disabled" = step 2 missed or wrong project. Green test but no orders = tab not named woocommerce_orders (step 8). "invalid_grant"/key error = private key wasn’t copied whole. Can’t create a key at all = your Workspace org blocks it; use a personal Google account or ask your admin.' },
+      { title: 'If it fails', detail: '403 / "caller does not have permission" = you didn’t share the sheet (step 6). "API disabled" = step 2 missed or wrong project. Green test but no orders = tab not named "Completed Orders" (step 8). "invalid_grant"/key error = private key wasn’t copied whole. Can’t create a key at all = your Workspace org blocks it; use a personal Google account or ask your admin.' },
     ],
   },
 }

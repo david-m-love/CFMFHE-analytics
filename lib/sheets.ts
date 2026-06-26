@@ -4,6 +4,15 @@ import { SHEET_MAPPING } from './config'
 import { buildOrder, normalizeCustomerType } from './orders'
 import { resolveCredential } from './credentials'
 
+/**
+ * Build an A1-notation range from a tab name. Sheet titles with spaces or
+ * special characters must be wrapped in single quotes (internal quotes doubled),
+ * otherwise the Sheets API returns "Unable to parse range".
+ */
+function rangeForTab(tab: string): string {
+  return /^[A-Za-z0-9_]+$/.test(tab) ? tab : `'${tab.replace(/'/g, "''")}'`
+}
+
 function sheetsClient(clientEmail: string, privateKey: string) {
   const auth = new google.auth.JWT({
     email: clientEmail,
@@ -81,11 +90,11 @@ export async function getSheetOrders(): Promise<{ configured: boolean; orders: O
   const sheets = sheetsClient(cred.clientEmail, cred.privateKey)
   const all: Order[] = []
   if (wooId) {
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId: wooId, range: SHEET_MAPPING.woocommerce.tab })
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: wooId, range: rangeForTab(SHEET_MAPPING.woocommerce.tab) })
     all.push(...rowsToOrders((res.data.values as string[][]) ?? [], 'cfmfhe', SHEET_MAPPING.woocommerce))
   }
   if (shopId) {
-    const res = await sheets.spreadsheets.values.get({ spreadsheetId: shopId, range: SHEET_MAPPING.shopify.tab })
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: shopId, range: rangeForTab(SHEET_MAPPING.shopify.tab) })
     all.push(...rowsToOrders((res.data.values as string[][]) ?? [], 'ec', SHEET_MAPPING.shopify))
   }
   return { configured: true, orders: all }

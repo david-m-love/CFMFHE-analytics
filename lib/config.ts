@@ -65,7 +65,7 @@ export const JANUARY_ANOMALY_NOTE =
  */
 export const SHEET_MAPPING = {
   woocommerce: {
-    tab: 'woocommerce_orders',
+    tab: 'Completed Orders',
     columns: {
       date: 'Date',
       orderId: 'Order #',
