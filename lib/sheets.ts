@@ -48,7 +48,27 @@ function rowsToOrders(
   const iAttr = idx(c.attribution)
   const iEmail = idx(c.email)
 
-  const orders: Order[] = []
+  // Exports are line-item level (one row per product). Group rows that share an
+  // Order Id back into a single order so order counts / AOV are accurate and a
+  // multi-product order isn't counted as several orders. Revenue is summed
+  // across the order's lines; quantity summed; products collected; the order's
+  // scalar fields (date, customer, email, status, coupon, attribution) come
+  // from its first line.
+  interface Group {
+    orderId: string
+    date: string
+    customerName: string
+    customerType: CustomerType
+    email: string | null
+    productNames: string[]
+    itemsSold: number
+    netSales: number
+    status: string
+    coupon: string | null
+    attribution: string | null
+  }
+  const groups = new Map<string, Group>()
+
   for (let r = 1; r < rows.length; r++) {
     const row = rows[r]
     if (!row || row.length === 0) continue
@@ -57,8 +77,26 @@ function rowsToOrders(
     if (isNaN(parsed.getTime())) continue // skip rows without a usable date
     const date = parsed.toISOString().slice(0, 10)
 
-    // Customer type: explicit column → else derive from lifetime order count
-    // (1 = first-ever purchase = new). Email identity refines this business-wide.
+    const orderId = (iId >= 0 ? row[iId] : '')?.trim() || `row-${r}`
+    const key = `${source}-${orderId}`
+
+    const lineNet = parseFloat((row[iNet] ?? '0').replace(/[^0-9.-]/g, '')) || 0
+    const lineQty = parseInt(row[iItems] ?? '1', 10) || 1
+    const lineProducts = (row[iProducts] ?? '')
+      .split(/[,;]/)
+      .map((s) => s.trim())
+      .filter(Boolean)
+
+    const existing = groups.get(key)
+    if (existing) {
+      existing.netSales += lineNet
+      existing.itemsSold += lineQty
+      existing.productNames.push(...lineProducts)
+      if (!existing.email && iEmail >= 0 && row[iEmail]) existing.email = row[iEmail]
+      continue
+    }
+
+    // First line of this order — capture its scalar fields.
     let customerType: CustomerType =
       iType >= 0 ? normalizeCustomerType(row[iType]) : 'unknown'
     if (customerType === 'unknown' && iCustOrders >= 0) {
@@ -67,7 +105,6 @@ function rowsToOrders(
       else if (n > 1) customerType = 'returning'
     }
 
-    // Name: explicit column → else assemble from first + last.
     let customerName = (iName >= 0 ? row[iName] : '') || ''
     if (!customerName && (iFirst >= 0 || iLast >= 0)) {
       customerName = [iFirst >= 0 ? row[iFirst] : '', iLast >= 0 ? row[iLast] : '']
@@ -76,25 +113,37 @@ function rowsToOrders(
         .trim()
     }
 
-    const net = parseFloat((row[iNet] ?? '0').replace(/[^0-9.-]/g, '')) || 0
-    orders.push(
-      buildOrder({
-        id: `${source}-${row[iId] ?? r}-${r}`,
-        source,
-        date,
-        customerName: customerName || 'Unknown',
-        customerType,
-        email: iEmail >= 0 ? (row[iEmail] || null) : null,
-        productNames: (row[iProducts] ?? '').split(/[,;]/).map((s) => s.trim()).filter(Boolean),
-        itemsSold: parseInt(row[iItems] ?? '1', 10) || 1,
-        netSales: net,
-        status: iStatus >= 0 ? (row[iStatus] ?? '') : 'Completed',
-        coupon: iCoupon >= 0 ? (row[iCoupon] || null) : null,
-        attribution: iAttr >= 0 ? (row[iAttr] || null) : null,
-      }),
-    )
+    groups.set(key, {
+      orderId,
+      date,
+      customerName: customerName || 'Unknown',
+      customerType,
+      email: iEmail >= 0 ? (row[iEmail] || null) : null,
+      productNames: lineProducts,
+      itemsSold: lineQty,
+      netSales: lineNet,
+      status: iStatus >= 0 ? (row[iStatus] ?? '') : 'Completed',
+      coupon: iCoupon >= 0 ? (row[iCoupon] || null) : null,
+      attribution: iAttr >= 0 ? (row[iAttr] || null) : null,
+    })
   }
-  return orders
+
+  return [...groups.values()].map((g) =>
+    buildOrder({
+      id: `${source}-${g.orderId}`,
+      source,
+      date: g.date,
+      customerName: g.customerName,
+      customerType: g.customerType,
+      email: g.email,
+      productNames: g.productNames.length ? g.productNames : ['Unknown product'],
+      itemsSold: g.itemsSold,
+      netSales: Math.round(g.netSales * 100) / 100,
+      status: g.status,
+      coupon: g.coupon,
+      attribution: g.attribution,
+    }),
+  )
 }
 
 /**
