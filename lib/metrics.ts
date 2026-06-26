@@ -316,6 +316,38 @@ export function monthlyAcquisition(orders: Order[], count = 12): AcquisitionPoin
   return points.slice(-count)
 }
 
+export interface MemberSplitPoint {
+  month: string
+  label: string
+  newMembers: number
+  returningMembers: number
+  isJanuary: boolean
+}
+
+/** Monthly membership orders split by new vs returning customers (stacked bar). */
+export function monthlyMemberSplit(orders: Order[], count = 12): MemberSplitPoint[] {
+  const map = new Map<string, MemberSplitPoint>()
+  for (const o of orders) {
+    if (!o.isMembership || o.netSales <= 0) continue
+    const month = o.date.slice(0, 7)
+    let pt = map.get(month)
+    if (!pt) {
+      const [y, m] = month.split('-').map(Number)
+      pt = {
+        month,
+        label: new Date(Date.UTC(y, m - 1, 1)).toLocaleDateString('en-US', { month: 'short', year: '2-digit' }),
+        newMembers: 0,
+        returningMembers: 0,
+        isJanuary: m === 1,
+      }
+      map.set(month, pt)
+    }
+    if (o.customerType === 'returning') pt.returningMembers += 1
+    else pt.newMembers += 1
+  }
+  return [...map.values()].sort((a, b) => a.month.localeCompare(b.month)).slice(-count)
+}
+
 function round(n: number): number {
   return Math.round(n * 100) / 100
 }

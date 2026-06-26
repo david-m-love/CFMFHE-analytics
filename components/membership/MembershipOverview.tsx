@@ -33,8 +33,10 @@ import {
   estimatedMrr,
   membershipRevenue,
   monthlyAcquisition,
+  monthlyMemberSplit,
   monthlyPriceSplit,
   monthlyRevenueByPlan,
+  newMemberRevenue,
   newMembers,
   planBreakdown,
 } from '@/lib/metrics'
@@ -70,6 +72,7 @@ export function MembershipOverview() {
   const revByPlan = useMemo(() => monthlyRevenueByPlan(storeOrders, 12), [storeOrders])
   const priceSplit = useMemo(() => monthlyPriceSplit(storeOrders, 12), [storeOrders])
   const acquisition = useMemo(() => monthlyAcquisition(storeOrders, 12), [storeOrders])
+  const memberSplit = useMemo(() => monthlyMemberSplit(storeOrders, 12), [storeOrders])
 
   const annualMembers = useMemo(() => {
     const set = new Set(
@@ -94,18 +97,30 @@ export function MembershipOverview() {
 
   return (
     <div>
-      {/* KPIs */}
+      {/* KPIs — revenue + quantity together */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
           label="Active Members"
           value={estimatedActiveMembers(filtered)}
           previous={cmp ? estimatedActiveMembers(cmp) : undefined}
           format="number"
+          info="activeMembers"
+          secondaryValue={estimatedMrr(filtered)}
+          secondaryFormat="currency"
+          secondaryLabel="MRR"
         />
         <KpiCard
-          label="MRR"
-          value={estimatedMrr(filtered)}
-          previous={cmp ? estimatedMrr(cmp) : undefined}
+          label="New Members"
+          value={newMembers(filtered)}
+          previous={cmp ? newMembers(cmp) : undefined}
+          format="number"
+          secondaryValue={newMemberRevenue(filtered)}
+          secondaryFormat="currency"
+        />
+        <KpiCard
+          label="Membership Revenue"
+          value={membershipRevenue(filtered)}
+          previous={cmp ? membershipRevenue(cmp) : undefined}
           format="currency"
         />
         <KpiCard
@@ -113,12 +128,6 @@ export function MembershipOverview() {
           value={avgPerMember(filtered)}
           previous={cmp ? avgPerMember(cmp) : undefined}
           format="currency"
-        />
-        <KpiCard
-          label="New Members"
-          value={newMembers(filtered)}
-          previous={cmp ? newMembers(cmp) : undefined}
-          format="number"
         />
       </div>
 
@@ -176,6 +185,25 @@ export function MembershipOverview() {
 
       {/* Charts */}
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader className="flex items-center justify-between">
+            <CardTitle>New vs Returning Members</CardTitle>
+            <Badge tone="neutral">12 months · by month</Badge>
+          </CardHeader>
+          <CardBody>
+            <ResponsiveContainer width="100%" height={260}>
+              <ComposedChart data={memberSplit} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                <CartesianGrid stroke={GRID} vertical={false} />
+                <XAxis dataKey="label" tick={{ fill: AXIS, fontSize: 10, fontFamily: 'var(--font-dm-mono)' }} axisLine={{ stroke: GRID }} tickLine={false} />
+                <YAxis tick={{ fill: AXIS, fontSize: 10, fontFamily: 'var(--font-dm-mono)' }} axisLine={false} tickLine={false} width={32} />
+                <Tooltip cursor={{ fill: 'rgba(28,27,24,0.04)' }} content={<ChartTooltip />} />
+                <Bar dataKey="newMembers" name="New" stackId="m" fill="#3B6FA0" />
+                <Bar dataKey="returningMembers" name="Returning" stackId="m" fill="#6B5EA8" radius={[3, 3, 0, 0]} />
+              </ComposedChart>
+            </ResponsiveContainer>
+          </CardBody>
+        </Card>
+
         <Card>
           <CardHeader className="flex items-center justify-between">
             <CardTitle>Revenue by Plan</CardTitle>

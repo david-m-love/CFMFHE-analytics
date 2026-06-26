@@ -4,7 +4,6 @@ import { useEffect, useState } from 'react'
 import { usePathname } from 'next/navigation'
 import { Menu, X } from 'lucide-react'
 import { Sidebar } from '@/components/sidebar'
-import { StoreFilter } from '@/components/StoreFilter'
 import { DateRangePicker } from '@/components/DateRangePicker'
 
 export function DashboardShell({ children }: { children: React.ReactNode }) {
@@ -63,7 +62,6 @@ export function DashboardShell({ children }: { children: React.ReactNode }) {
           </button>
           <span className="font-serif text-base text-ink lg:hidden">CFMFHE</span>
           <div className="ml-auto flex items-center gap-2 overflow-x-auto">
-            <StoreFilter />
             <DateRangePicker />
           </div>
         </header>

@@ -63,41 +63,43 @@ export function useOrdersMeta() {
   return useContext(OrdersContext)
 }
 
-/** Orders filtered by the active primary date range + store filter. */
+function excludeSources(orders: Order[], excluded: string[]): Order[] {
+  return excluded.length ? orders.filter((o) => !excluded.includes(o.source)) : orders
+}
+
+/** Orders for the active date range, across all included data sources. */
 export function useFilteredOrders(): Order[] {
   const { allOrders } = useContext(OrdersContext)
-  const { range, storeFilter } = useDashboard()
+  const { range, excludedSources } = useDashboard()
   return useMemo(
     () =>
-      filterOrders(allOrders, {
-        from: range.from,
-        to: range.to,
-        source: storeFilter,
-      }),
-    [allOrders, range.from, range.to, storeFilter],
+      excludeSources(
+        filterOrders(allOrders, { from: range.from, to: range.to }),
+        excludedSources,
+      ),
+    [allOrders, range.from, range.to, excludedSources],
   )
 }
 
-/** Orders filtered by store only (for rolling 12-month charts). */
+/** All-time orders (for rolling 12-month charts), across included sources. */
 export function useStoreOrders(): Order[] {
   const { allOrders } = useContext(OrdersContext)
-  const { storeFilter } = useDashboard()
+  const { excludedSources } = useDashboard()
   return useMemo(
-    () => filterOrders(allOrders, { source: storeFilter }),
-    [allOrders, storeFilter],
+    () => excludeSources(allOrders, excludedSources),
+    [allOrders, excludedSources],
   )
 }
 
-/** Orders filtered by the comparison range (when compare is enabled). */
+/** Orders for the comparison range (when compare is enabled). */
 export function useCompareOrders(): Order[] | null {
   const { allOrders } = useContext(OrdersContext)
-  const { compareEnabled, compareRange, storeFilter } = useDashboard()
+  const { compareEnabled, compareRange, excludedSources } = useDashboard()
   return useMemo(() => {
     if (!compareEnabled || !compareRange) return null
-    return filterOrders(allOrders, {
-      from: compareRange.from,
-      to: compareRange.to,
-      source: storeFilter,
-    })
-  }, [allOrders, compareEnabled, compareRange, storeFilter])
+    return excludeSources(
+      filterOrders(allOrders, { from: compareRange.from, to: compareRange.to }),
+      excludedSources,
+    )
+  }, [allOrders, compareEnabled, compareRange, excludedSources])
 }

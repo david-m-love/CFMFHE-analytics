@@ -2,18 +2,27 @@
 
 import { ArrowDownRight, ArrowUpRight } from 'lucide-react'
 import { Card } from '@/components/ui/card'
+import { InfoTip } from '@/components/info-tip'
 import { cn, formatCurrency, formatNumber, formatPercent, pctDelta } from '@/lib/utils'
+
+type Format = 'currency' | 'number' | 'percent'
 
 interface Props {
   label: string
   value: number
   previous?: number | null
-  format: 'currency' | 'number' | 'percent'
+  format: Format
   goodWhen?: 'up' | 'down'
   hint?: string
+  /** glossary key for an ⓘ definition next to the label */
+  info?: string
+  /** optional secondary metric shown in the same card (e.g. a count next to revenue) */
+  secondaryValue?: number
+  secondaryFormat?: Format
+  secondaryLabel?: string
 }
 
-function fmt(v: number, format: Props['format']) {
+function fmt(v: number, format: Format) {
   if (format === 'currency') return formatCurrency(v)
   if (format === 'percent') return formatPercent(v)
   return formatNumber(v)
@@ -26,6 +35,10 @@ export function KpiCard({
   format,
   goodWhen = 'up',
   hint,
+  info,
+  secondaryValue,
+  secondaryFormat = 'number',
+  secondaryLabel,
 }: Props) {
   const delta =
     previous != null && previous !== undefined ? pctDelta(value, previous) : undefined
@@ -34,11 +47,20 @@ export function KpiCard({
 
   return (
     <Card className="p-4">
-      <div className="font-mono text-[11px] uppercase tracking-wide text-text-3">
+      <div className="flex items-center gap-1 font-mono text-[11px] uppercase tracking-wide text-text-3">
         {label}
+        {info && <InfoTip term={info} />}
       </div>
-      <div className="mt-1.5 font-mono text-2xl font-medium text-ink tabular-nums">
-        {fmt(value, format)}
+      <div className="mt-1.5 flex items-baseline gap-2">
+        <span className="font-mono text-2xl font-medium text-ink tabular-nums">
+          {fmt(value, format)}
+        </span>
+        {secondaryValue != null && (
+          <span className="font-mono text-sm text-text-2 tabular-nums">
+            {fmt(secondaryValue, secondaryFormat)}
+            {secondaryLabel ? ` ${secondaryLabel}` : ''}
+          </span>
+        )}
       </div>
       <div className="mt-1 flex items-center gap-1.5 text-xs">
         {delta != null ? (

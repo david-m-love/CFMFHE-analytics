@@ -8,14 +8,9 @@ import {
   useOrdersMeta,
 } from '@/lib/use-orders'
 import { useDashboard } from '@/store/dashboard'
-import {
-  STAGE_DEFS,
-  buildRevenueStrip,
-  stageValue,
-  type StageKpi,
-} from '@/lib/funnel'
+import { STAGE_DEFS, stageValue, type StageKpi } from '@/lib/funnel'
 import { useMediaQuery } from '@/lib/use-mobile'
-import { cn, formatCurrency, formatNumber, pctDelta } from '@/lib/utils'
+import { cn, formatNumber, pctDelta } from '@/lib/utils'
 
 function daysBetween(from: string, to: string) {
   return Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000) + 1
@@ -77,11 +72,6 @@ export function MembershipFunnel() {
     [orders, compare],
   )
 
-  const revStrip = useMemo(
-    () => buildRevenueStrip(orders, compare ?? null, days),
-    [orders, compare, days],
-  )
-
   const maxV = Math.max(1, ...stages.map((s) => s.current))
   const active = activeIdx != null ? stages[activeIdx] : null
 
@@ -91,35 +81,8 @@ export function MembershipFunnel() {
 
   return (
     <div>
-      {/* Revenue summary strip */}
-      <div className="grid grid-cols-2 gap-2.5 md:grid-cols-5">
-        {revStrip.map((c) => (
-          <div
-            key={c.label}
-            className="relative overflow-hidden rounded-lg border border-border bg-card px-4 py-3.5"
-          >
-            <span
-              className="absolute inset-x-0 top-0 h-[3px]"
-              style={{ background: c.color }}
-            />
-            <div className="font-mono text-[9px] uppercase tracking-wider text-text-3">
-              {c.label}
-            </div>
-            <div className="mt-1.5 font-serif text-2xl leading-none text-ink">
-              {c.format === 'currency'
-                ? formatCurrency(c.value, { compact: c.value >= 10000 })
-                : formatNumber(c.value)}
-            </div>
-            <div className="mt-1 text-[11px] text-text-2">{c.sub}</div>
-            {c.compareValue != null && (
-              <DeltaChip cur={c.value} cmp={c.compareValue} suffix={cmpSuffix} className="mt-1.5" />
-            )}
-          </div>
-        ))}
-      </div>
-
-      {/* Placeholder note */}
-      <div className="mt-4 flex items-center gap-2 rounded-md border border-[#e8c84a] bg-[#fff8e6] px-3 py-2 text-xs text-[#7a6010]">
+      {/* Placeholder note (revenue KPIs now live on the Overview tab) */}
+      <div className="flex items-center gap-2 rounded-md border border-[#e8c84a] bg-[#fff8e6] px-3 py-2 text-xs text-[#7a6010]">
         <TriangleAlert size={14} className="shrink-0" />
         <span>
           <strong>Stages 1–3 are illustrative placeholders</strong> (GA4 + Klaviyo

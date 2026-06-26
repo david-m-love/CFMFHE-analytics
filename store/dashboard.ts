@@ -7,20 +7,20 @@ import {
   resolveQuickSelect,
 } from '@/lib/date-ranges'
 
-export type StoreFilter = StoreSource | 'all'
 export type CompareSelect = 'previous_period' | 'previous_year' | 'custom'
 
 interface DashboardState {
   quickSelect: QuickSelect
   range: DateRange
-  storeFilter: StoreFilter
+  /** Stores deliberately excluded from the combined dataset (default: none). */
+  excludedSources: StoreSource[]
   compareEnabled: boolean
   compareSelect: CompareSelect
   compareRange: DateRange | null
 
   setQuickSelect: (q: QuickSelect) => void
   setCustomRange: (range: DateRange) => void
-  setStoreFilter: (s: StoreFilter) => void
+  toggleSource: (s: StoreSource) => void
   toggleCompare: (enabled: boolean) => void
   setCompareSelect: (c: CompareSelect) => void
   setCustomCompareRange: (range: DateRange) => void
@@ -33,7 +33,7 @@ export const useDashboard = create<DashboardState>()(
     (set, get) => ({
       quickSelect: 'last_30',
       range: initialRange,
-      storeFilter: 'all',
+      excludedSources: [],
       compareEnabled: false,
       compareSelect: 'previous_period',
       compareRange: resolveCompare(initialRange, 'previous_period'),
@@ -67,7 +67,14 @@ export const useDashboard = create<DashboardState>()(
         })
       },
 
-      setStoreFilter: (s) => set({ storeFilter: s }),
+      toggleSource: (s) => {
+        const { excludedSources } = get()
+        set({
+          excludedSources: excludedSources.includes(s)
+            ? excludedSources.filter((x) => x !== s)
+            : [...excludedSources, s],
+        })
+      },
 
       toggleCompare: (enabled) => {
         const { range, compareSelect } = get()

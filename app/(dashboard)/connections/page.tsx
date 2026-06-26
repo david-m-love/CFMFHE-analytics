@@ -8,6 +8,9 @@ import { PageHeader } from '@/components/page-header'
 import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CONNECTION_DEFS, type ConnId } from '@/lib/connection-defs'
+import { useDashboard } from '@/store/dashboard'
+import { STORE_LABELS } from '@/types'
+import type { StoreSource } from '@/types'
 import { cn } from '@/lib/utils'
 
 type ConnStatus = 'connected' | 'not_configured' | 'error'
@@ -113,6 +116,8 @@ export default function ConnectionsPage() {
         </Button>
       </div>
 
+      <IncludedSources />
+
       {!secureMode && !loadingAll && <SecureModeNotice />}
       {secureMode && !persistent && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-[#ecdcc2] bg-[#f6eddf] px-3 py-2 text-xs text-accent-amber">
@@ -203,6 +208,46 @@ export default function ConnectionsPage() {
         />
       )}
     </>
+  )
+}
+
+function IncludedSources() {
+  const { excludedSources, toggleSource } = useDashboard()
+  const stores = Object.keys(STORE_LABELS) as StoreSource[]
+  return (
+    <Card className="mb-4">
+      <CardBody className="pt-4">
+        <div className="flex items-center justify-between gap-3">
+          <div>
+            <h3 className="font-serif text-lg text-ink">Included data</h3>
+            <p className="text-sm text-text-2">
+              Analytics combine every store by default. Toggle a store off to exclude it
+              from your numbers (recommended: leave all on).
+            </p>
+          </div>
+        </div>
+        <div className="mt-3 flex flex-wrap gap-2">
+          {stores.map((s) => {
+            const on = !excludedSources.includes(s)
+            return (
+              <button
+                key={s}
+                onClick={() => toggleSource(s)}
+                className={cn(
+                  'rounded-md border px-3 py-1.5 text-xs font-medium transition-colors',
+                  on
+                    ? 'border-accent-blue bg-[#eaf0f6] text-accent-blue'
+                    : 'border-border text-text-3 line-through',
+                )}
+              >
+                {on ? '✓ ' : ''}
+                {STORE_LABELS[s]}
+              </button>
+            )
+          })}
+        </div>
+      </CardBody>
+    </Card>
   )
 }
 
