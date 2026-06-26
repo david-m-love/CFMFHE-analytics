@@ -19,7 +19,7 @@ export const GUIDES: Record<string, Guide> = {
     slug: 'shopify-direct-api',
     title: 'Connect Shopify (direct API)',
     intro:
-      'This connects the Essential Conversations Shopify store directly via the Admin API so orders flow in live — no spreadsheet needed. You create a "custom app" in Shopify, copy its access token, and paste it into the Connections page.',
+      'This connects the Essential Conversations Shopify store directly via the Admin API so orders flow in live — no spreadsheet needed. You create a "custom app" in Shopify, copy its Admin API ACCESS TOKEN (starts with shpat_), and paste it here. Most connection problems come from pasting the wrong value: use the shpat_ token, NOT the "API secret key" (shpss_) or the "API key" (a hex string).',
     estimate: '~10 minutes',
     steps: [
       {
@@ -33,28 +33,33 @@ export const GUIDES: Record<string, Guide> = {
           'Click "Create an app", name it "CFMFHE Analytics", pick yourself as the app developer, and click "Create app".',
       },
       {
-        title: 'Grant read access',
+        title: 'Grant read access (including full order history)',
         detail:
-          'Open the "Configuration" tab → under "Admin API integration" click "Configure" → enable these scopes: read_orders, read_products (read_customers is optional). Click Save.',
+          'Configuration tab → "Admin API integration" → Configure → enable: read_orders, read_products, AND read_all_orders. The read_all_orders scope is important — without it Shopify only returns the LAST 60 DAYS of orders. Click Save. (Toggling read_all_orders may ask for a short reason; that\'s normal.)',
+      },
+      {
+        title: 'Enable Protected customer data access',
+        detail:
+          'Still on Configuration, find "Protected customer data access" → request/enable it and tick "Customer name" and "Email". Orders include customer info, so without this you can get a 401/403 or blank customer fields. On your own store\'s custom app you can grant this yourself — no Shopify review needed.',
       },
       {
         title: 'Install the app',
-        detail: 'Go to the "API credentials" tab → click "Install app" → confirm Install.',
+        detail: 'Go to the "API credentials" tab → click "Install app" → confirm Install. (The access token only appears AFTER installing.)',
       },
       {
-        title: 'Copy the Admin API access token',
+        title: 'Copy the Admin API ACCESS TOKEN (shpat_)',
         detail:
-          'Still on "API credentials", under "Admin API access token" click "Reveal token once" and copy it. It starts with "shpat_". ⚠️ Shopify shows it only once — copy it now.',
+          'Still on "API credentials", under "Admin API access token" click "Reveal token once" and copy it — it starts with "shpat_". ⚠️ This is NOT the "API secret key" (shpss_) or the "API key" (hex); those are for OAuth and won\'t work here. Shopify shows the token only once.',
       },
       {
         title: 'Find your store domain',
         detail:
-          'Your store domain looks like "your-store.myshopify.com". It\'s the myshopify address (Settings → Domains, or the part before /admin in your admin URL).',
+          'Use the ".myshopify.com" address (e.g. essential-conversations.myshopify.com), NOT the public custom domain — the Admin API only answers on the myshopify domain. Find it in Settings → Domains, or it\'s the part before /admin in your admin URL.',
       },
       {
         title: 'Connect it here',
         detail:
-          'In this dashboard: Connections → Shopify → Connect. Paste the store domain and the access token, then "Test & Save". It should turn green and start importing recent orders.',
+          'Connections → Shopify → Connect. Paste the store domain and the shpat_ access token, then "Test & Save". It should turn green and show your shop name. Errors: "Access token rejected" = wrong token / app not installed / protected data not granted; "returned 404" = wrong domain; green but few old orders = missing read_all_orders.',
       },
     ],
   },
