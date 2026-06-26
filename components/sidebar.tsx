@@ -12,6 +12,7 @@ import {
   Package,
   PlugZap,
   TrendingUp,
+  Users,
 } from 'lucide-react'
 import { Logo } from './logo'
 import { cn } from '@/lib/utils'
@@ -29,6 +30,7 @@ const NAV = [
 export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
   const pathname = usePathname()
   const { data: session } = useSession()
+  const isAdmin = (session?.user as { role?: string } | undefined)?.role === 'admin'
 
   return (
     <aside className="flex h-full w-full flex-col bg-ink text-white">
@@ -61,6 +63,23 @@ export function Sidebar({ onNavigate }: { onNavigate?: () => void }) {
               </li>
             )
           })}
+          {isAdmin && (
+            <li>
+              <Link
+                href="/admin"
+                onClick={onNavigate}
+                className={cn(
+                  'flex items-center gap-2.5 rounded-md px-3 py-2 text-sm transition-colors',
+                  pathname.startsWith('/admin')
+                    ? 'bg-white/10 text-white'
+                    : 'text-white/65 hover:bg-white/5 hover:text-white',
+                )}
+              >
+                <Users size={16} />
+                Team
+              </Link>
+            </li>
+          )}
         </ul>
       </nav>
       <div className="border-t border-white/10 px-3 py-3">

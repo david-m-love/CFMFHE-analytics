@@ -1,4 +1,11 @@
-import { createCipheriv, createDecipheriv, createHash, randomBytes } from 'crypto'
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+  scryptSync,
+  timingSafeEqual,
+} from 'crypto'
 
 // AES-256-GCM encryption for credentials at rest. The key is derived from
 // APP_ENCRYPTION_KEY (any string) via SHA-256 → 32 bytes.
@@ -29,4 +36,19 @@ export function decrypt(payload: string): string {
   const decipher = createDecipheriv('aes-256-gcm', key(), iv)
   decipher.setAuthTag(tag)
   return Buffer.concat([decipher.update(enc), decipher.final()]).toString('utf8')
+}
+
+// Password hashing (scrypt). Stored as "salt:hash" hex.
+export function hashPassword(password: string): string {
+  const salt = randomBytes(16)
+  const dk = scryptSync(password, salt, 32)
+  return `${salt.toString('hex')}:${dk.toString('hex')}`
+}
+
+export function verifyPassword(password: string, stored: string): boolean {
+  const [saltHex, hashHex] = stored.split(':')
+  if (!saltHex || !hashHex) return false
+  const dk = scryptSync(password, Buffer.from(saltHex, 'hex'), 32)
+  const expected = Buffer.from(hashHex, 'hex')
+  return dk.length === expected.length && timingSafeEqual(dk, expected)
 }

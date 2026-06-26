@@ -2,9 +2,9 @@ import { Redis } from '@upstash/redis'
 import { decrypt, encrypt } from './crypto'
 import type { ConnId } from './connection-defs'
 
-// Persists encrypted credential blobs. Uses Vercel KV / Upstash Redis when
-// configured (REST env vars), otherwise an in-memory fallback so the app runs
-// in preview — the fallback does NOT survive restarts.
+// Persists encrypted blobs. Uses Vercel KV / Upstash Redis when configured
+// (REST env vars), otherwise an in-memory fallback for preview — the fallback
+// does NOT survive restarts.
 
 const memory = new Map<string, string>()
 
@@ -19,18 +19,34 @@ export function persistenceAvailable(): boolean {
   return client() !== null
 }
 
+// ── Generic KV ─────────────────────────────────────────────────────
+export async function kvGet(key: string): Promise<string | null> {
+  const redis = client()
+  if (redis) return (await redis.get<string>(key)) ?? null
+  return memory.get(key) ?? null
+}
+
+export async function kvSet(key: string, value: string): Promise<void> {
+  const redis = client()
+  if (redis) await redis.set(key, value)
+  else memory.set(key, value)
+}
+
+export async function kvDel(key: string): Promise<void> {
+  const redis = client()
+  if (redis) await redis.del(key)
+  else memory.delete(key)
+}
+
+// ── Credential blobs (encrypted) ───────────────────────────────────
 const keyFor = (id: ConnId) => `cred:${id}`
 
 export async function saveCredential(id: ConnId, data: Record<string, string>): Promise<void> {
-  const payload = encrypt(JSON.stringify(data))
-  const redis = client()
-  if (redis) await redis.set(keyFor(id), payload)
-  else memory.set(keyFor(id), payload)
+  await kvSet(keyFor(id), encrypt(JSON.stringify(data)))
 }
 
 export async function getStoredCredential(id: ConnId): Promise<Record<string, string> | null> {
-  const redis = client()
-  const raw = redis ? await redis.get<string>(keyFor(id)) : memory.get(keyFor(id))
+  const raw = await kvGet(keyFor(id))
   if (!raw) return null
   try {
     return JSON.parse(decrypt(raw)) as Record<string, string>
@@ -40,7 +56,5 @@ export async function getStoredCredential(id: ConnId): Promise<Record<string, st
 }
 
 export async function clearStoredCredential(id: ConnId): Promise<void> {
-  const redis = client()
-  if (redis) await redis.del(keyFor(id))
-  else memory.delete(keyFor(id))
+  await kvDel(keyFor(id))
 }

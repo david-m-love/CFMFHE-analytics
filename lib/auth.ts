@@ -1,12 +1,7 @@
 import type { NextAuthOptions } from 'next-auth'
 import CredentialsProvider from 'next-auth/providers/credentials'
 import { encryptionConfigured } from './crypto'
-
-interface DashboardUser {
-  email: string
-  password: string
-  name: string
-}
+import { authenticate } from './users'
 
 /**
  * Login is OFF until DASHBOARD_USERS is configured, so deploying never locks
@@ -22,16 +17,6 @@ export function secureModeEnabled(): boolean {
   return authEnabled() && encryptionConfigured()
 }
 
-function getUsers(): DashboardUser[] {
-  const raw = process.env.DASHBOARD_USERS
-  if (!raw) return []
-  return raw
-    .split(',')
-    .map((entry) => entry.split('|').map((s) => s.trim()))
-    .filter((parts) => parts.length === 3)
-    .map(([name, email, password]) => ({ name, email, password }))
-}
-
 export const authOptions: NextAuthOptions = {
   session: { strategy: 'jwt', maxAge: 30 * 24 * 60 * 60 },
   pages: { signIn: '/login' },
@@ -44,14 +29,20 @@ export const authOptions: NextAuthOptions = {
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials.password) return null
-        const user = getUsers().find(
-          (u) =>
-            u.email.toLowerCase() === credentials.email.toLowerCase() &&
-            u.password === credentials.password,
-        )
+        const user = await authenticate(credentials.email, credentials.password)
         if (!user) return null
-        return { id: user.email, email: user.email, name: user.name }
+        return { id: user.email, email: user.email, name: user.name, role: user.role }
       },
     }),
   ],
+  callbacks: {
+    async jwt({ token, user }) {
+      if (user && 'role' in user) token.role = (user as { role?: string }).role
+      return token
+    },
+    async session({ session, token }) {
+      if (session.user) (session.user as { role?: string }).role = token.role as string | undefined
+      return session
+    },
+  },
 }
