@@ -133,7 +133,7 @@ export async function getKlaviyoOverview(
 
 /** Lists and their profile counts. */
 async function fetchLists(apiKey: string): Promise<ListCount[]> {
-  const res = await fetch(`${BASE}/lists/?additional-fields%5Blist%5D=profile_count`, {
+  const res = await fetch(`${BASE}/lists/?additional-fields[list]=profile_count`, {
     headers: headers(apiKey),
   })
   if (!res.ok) throw new Error(`lists ${res.status}`)
@@ -145,19 +145,23 @@ async function fetchLists(apiKey: string): Promise<ListCount[]> {
     .sort((a, b) => b.count - a.count)
 }
 
-/** New profiles per month over the trailing 12 months (paged, sorted newest-first). */
+/**
+ * New profiles per month over the trailing 12 months. Pages newest-first and
+ * stops once it reaches profiles older than the 12-month window — no date
+ * filter param (which is a common source of 400s), just sort + page[size].
+ */
 async function fetchNewByMonth(apiKey: string): Promise<{ monthly: SubscriberMonth[]; capped: boolean }> {
   const monthly = monthBuckets()
   const byMonth = new Map(monthly.map((m) => [m.month, m]))
-  const earliest = monthly[0].month + '-01T00:00:00Z'
+  const firstMonth = monthly[0].month // 'YYYY-MM'
 
-  let url: string | null =
-    `${BASE}/profiles/?filter=${encodeURIComponent(`greater-or-equal(created,${earliest})`)}` +
-    `&sort=-created&fields%5Bprofile%5D=created&page%5Bsize%5D=100`
+  // Literal brackets — Klaviyo's JSON:API rejects percent-encoded brackets.
+  let url: string | null = `${BASE}/profiles/?sort=-created&fields[profile]=created&page[size]=100`
   let pages = 0
   let capped = false
+  let reachedOld = false
 
-  while (url && pages < MAX_PROFILE_PAGES) {
+  while (url && pages < MAX_PROFILE_PAGES && !reachedOld) {
     const res: Response = await fetch(url, { headers: headers(apiKey) })
     if (!res.ok) {
       if (pages === 0) throw new Error(`profiles ${res.status}`)
@@ -170,12 +174,17 @@ async function fetchNewByMonth(apiKey: string): Promise<{ monthly: SubscriberMon
     for (const p of json.data ?? []) {
       const created = p.attributes?.created
       if (!created) continue
-      const bucket = byMonth.get(created.slice(0, 7))
+      const mk = created.slice(0, 7)
+      if (mk < firstMonth) {
+        reachedOld = true // sorted newest-first, so everything after is older too
+        break
+      }
+      const bucket = byMonth.get(mk)
       if (bucket) bucket.count += 1
     }
     url = json.links?.next ?? null
     pages++
-    if (url && pages >= MAX_PROFILE_PAGES) capped = true
+    if (url && pages >= MAX_PROFILE_PAGES && !reachedOld) capped = true
   }
 
   return { monthly, capped }
