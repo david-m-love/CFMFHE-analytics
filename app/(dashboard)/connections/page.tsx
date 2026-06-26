@@ -2,7 +2,8 @@
 
 import { useCallback, useEffect, useState } from 'react'
 import { createPortal } from 'react-dom'
-import { Lock, Plus, RefreshCw, Wrench, X } from 'lucide-react'
+import Link from 'next/link'
+import { HelpCircle, Lock, Plus, RefreshCw, Wrench, X } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { Card, CardBody } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -133,6 +134,15 @@ export default function ConnectionsPage() {
                     <div className="flex items-center gap-2">
                       <StatusDot status={r.status} />
                       <h3 className="font-serif text-lg text-ink">{r.label}</h3>
+                      {!skeleton && CONNECTION_DEFS[r.id]?.docsSlug && (
+                        <Link
+                          href={`/how-to/${CONNECTION_DEFS[r.id].docsSlug}`}
+                          title={`How to connect ${r.label}`}
+                          className="text-text-3 hover:text-accent-blue"
+                        >
+                          <HelpCircle size={15} />
+                        </Link>
+                      )}
                     </div>
                     <p className="mt-0.5 text-sm text-text-2">{r.description}</p>
                   </div>
@@ -264,9 +274,18 @@ function ConnectionEditor({
     <div className="fixed inset-0 z-[60]">
       <button aria-label="Close" className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-2xl bg-card p-4 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[520px] sm:max-w-[92vw] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-2 flex items-center gap-2">
           <h2 className="font-serif text-lg text-ink">Connect {def.label}</h2>
-          <button onClick={onClose} className="rounded-md p-1 text-text-3 hover:bg-paper" aria-label="Close">
+          {def.docsSlug && (
+            <Link
+              href={`/how-to/${def.docsSlug}`}
+              target="_blank"
+              className="inline-flex items-center gap-1 text-xs text-accent-blue hover:underline"
+            >
+              <HelpCircle size={14} /> Setup guide
+            </Link>
+          )}
+          <button onClick={onClose} className="ml-auto rounded-md p-1 text-text-3 hover:bg-paper" aria-label="Close">
             <X size={18} />
           </button>
         </div>
@@ -329,9 +348,6 @@ function ConnectionEditor({
   )
 }
 
-const SKELETON: ConnResult[] = [
-  { id: 'sheets', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
-  { id: 'klaviyo', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
-  { id: 'ga4', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
-  { id: 'anthropic', label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' },
-]
+const SKELETON: ConnResult[] = (['sheets', 'shopify', 'klaviyo', 'ga4', 'anthropic'] as ConnId[]).map(
+  (id) => ({ id, label: '', description: '', status: 'not_configured', source: 'none', checkedAt: '' }),
+)

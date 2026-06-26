@@ -2,6 +2,7 @@ import { google } from 'googleapis'
 import { JWT } from 'google-auth-library'
 import { type ConnId, CONNECTION_DEFS, CONNECTION_ORDER } from './connection-defs'
 import { credentialSource, resolveCredential } from './credentials'
+import { testShopify } from './shopify'
 
 export type { ConnId } from './connection-defs'
 export { CONNECTION_ORDER } from './connection-defs'
@@ -84,6 +85,33 @@ async function testSheets(): Promise<ConnResult> {
   }
 }
 
+async function testShopifyConn(): Promise<ConnResult> {
+  const m = meta('shopify')
+  const source = await credentialSource('shopify')
+  const v = await resolveCredential('shopify')
+  if (!v.storeDomain || !v.accessToken) {
+    return {
+      ...m,
+      status: 'not_configured',
+      source,
+      fix: 'Add your Shopify store domain and an Admin API access token.',
+      checkedAt: now(),
+    }
+  }
+  const res = await testShopify(v.storeDomain, v.accessToken)
+  if (!res.ok) {
+    return {
+      ...m,
+      status: 'error',
+      source,
+      detail: res.error ?? 'Connection failed.',
+      fix: 'Check the store domain and that the custom app is installed with read_orders.',
+      checkedAt: now(),
+    }
+  }
+  return { ...m, status: 'connected', source, detail: res.name ? `Store: ${res.name}.` : 'Connected.', checkedAt: now() }
+}
+
 async function testKlaviyo(): Promise<ConnResult> {
   const m = meta('klaviyo')
   const source = await credentialSource('klaviyo')
@@ -157,6 +185,7 @@ async function testAnthropic(): Promise<ConnResult> {
 
 const TESTS: Record<ConnId, () => Promise<ConnResult>> = {
   sheets: testSheets,
+  shopify: testShopifyConn,
   klaviyo: testKlaviyo,
   ga4: testGa4,
   anthropic: testAnthropic,

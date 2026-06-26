@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { getOrders } from '@/lib/sheets'
+import { getOrders } from '@/lib/orders-source'
 
 export const dynamic = 'force-dynamic'
 

@@ -1,8 +1,7 @@
 import { google } from 'googleapis'
-import type { CustomerType, DataEnvelope, Order, StoreSource } from '@/types'
+import type { CustomerType, Order, StoreSource } from '@/types'
 import { SHEET_MAPPING } from './config'
 import { buildOrder, normalizeCustomerType } from './orders'
-import { getMockOrders } from './mock-data'
 import { resolveCredential } from './credentials'
 
 function sheetsClient(clientEmail: string, privateKey: string) {
@@ -67,63 +66,27 @@ function rowsToOrders(
 }
 
 /**
- * Returns normalized orders from both stores. Falls back to a mock dataset
- * when credentials are absent (so the app runs pre-launch), and reports a
- * "disconnected" status on hard failures rather than crashing.
+ * Order data from Google Sheets. `configured` is false when credentials are
+ * absent. Pulls WooCommerce (cfmfhe) and, if a Shopify tab is configured here,
+ * Shopify rows too. Throws on hard failure (caller decides how to degrade).
  */
-export async function getOrders(): Promise<DataEnvelope<Order[]>> {
+export async function getSheetOrders(): Promise<{ configured: boolean; orders: Order[] }> {
   const cred = await resolveCredential('sheets')
   const wooId = cred.woocommerceSheetId
   const shopId = cred.shopifySheetId
   if (!cred.clientEmail || !cred.privateKey || (!wooId && !shopId)) {
-    return {
-      status: 'mock',
-      updatedAt: null,
-      data: getMockOrders(),
-      note: 'Showing sample data — Google Sheets not yet connected (sync setup in progress).',
-    }
+    return { configured: false, orders: [] }
   }
 
-  try {
-    const sheets = sheetsClient(cred.clientEmail, cred.privateKey)
-    const all: Order[] = []
-
-    if (wooId) {
-      const res = await sheets.spreadsheets.values.get({
-        spreadsheetId: wooId,
-        range: SHEET_MAPPING.woocommerce.tab,
-      })
-      all.push(
-        ...rowsToOrders(
-          (res.data.values as string[][]) ?? [],
-          'cfmfhe',
-          SHEET_MAPPING.woocommerce,
-        ),
-      )
-    }
-
-    if (shopId) {
-      const res = await sheets.spreadsheets.values.get({
-        spreadsheetId: shopId,
-        range: SHEET_MAPPING.shopify.tab,
-      })
-      all.push(
-        ...rowsToOrders(
-          (res.data.values as string[][]) ?? [],
-          'ec',
-          SHEET_MAPPING.shopify,
-        ),
-      )
-    }
-
-    return { status: 'connected', updatedAt: new Date().toISOString(), data: all }
-  } catch (err) {
-    console.error('[sheets] failed to load orders:', err)
-    return {
-      status: 'disconnected',
-      updatedAt: null,
-      data: [],
-      note: 'Google Sheets data source is unavailable right now.',
-    }
+  const sheets = sheetsClient(cred.clientEmail, cred.privateKey)
+  const all: Order[] = []
+  if (wooId) {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: wooId, range: SHEET_MAPPING.woocommerce.tab })
+    all.push(...rowsToOrders((res.data.values as string[][]) ?? [], 'cfmfhe', SHEET_MAPPING.woocommerce))
   }
+  if (shopId) {
+    const res = await sheets.spreadsheets.values.get({ spreadsheetId: shopId, range: SHEET_MAPPING.shopify.tab })
+    all.push(...rowsToOrders((res.data.values as string[][]) ?? [], 'ec', SHEET_MAPPING.shopify))
+  }
+  return { configured: true, orders: all }
 }
