@@ -6,8 +6,8 @@ import { usePathname } from 'next/navigation'
 const TABS = [
   { label: 'Funnel', href: '/membership' },
   { label: 'Cohorts', href: '/membership/cohorts' },
+  { label: 'LTV', href: '/membership/ltv' },
   { label: 'Overview', href: null },
-  { label: 'LTV', href: null },
 ] as const
 
 export function MembershipTabs() {
