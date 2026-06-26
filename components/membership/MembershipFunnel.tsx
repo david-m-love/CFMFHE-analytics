@@ -155,7 +155,7 @@ export function MembershipFunnel() {
                   }
                 }
                 connector = (
-                  <div className="flex h-4 items-center pl-[134px]">
+                  <div className="flex h-4 items-center pl-[108px] sm:pl-[134px]">
                     <span className="text-[11px] text-text-3">↓</span>
                     <span
                       className="ml-1 whitespace-nowrap rounded px-1.5 py-0.5 font-mono text-[9px] font-medium"
@@ -179,7 +179,7 @@ export function MembershipFunnel() {
                     )}
                     style={{ color: activeIdx === i ? s.def.color : 'transparent' }}
                   >
-                    <span className="flex w-[130px] shrink-0 flex-col justify-center gap-0.5 border-r border-border bg-card px-3 py-2">
+                    <span className="flex w-[104px] shrink-0 flex-col justify-center gap-0.5 border-r border-border bg-card px-2.5 py-2 sm:w-[130px] sm:px-3">
                       <span className="font-mono text-[9px] tracking-wider text-text-3">
                         STAGE {s.def.num}
                       </span>
@@ -208,8 +208,8 @@ export function MembershipFunnel() {
                           {formatNumber(s.current)}
                         </span>
                       </span>
-                      <span className="absolute right-0 z-20 flex min-w-[108px] flex-col justify-center gap-0.5 bg-gradient-to-l from-[#EDE9E0] from-55% to-transparent px-2.5 py-1.5">
-                        <span className="font-mono text-[10px] font-medium text-text-2">
+                      <span className="absolute right-0 z-20 flex min-w-[58px] flex-col justify-center gap-0.5 bg-gradient-to-l from-[#EDE9E0] from-40% to-transparent px-2 py-1.5 sm:min-w-[108px] sm:px-2.5">
+                        <span className="hidden font-mono text-[10px] font-medium text-text-2 sm:block">
                           {pctOfReach}% of reach
                         </span>
                         {s.compare != null && (

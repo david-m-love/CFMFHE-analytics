@@ -10,6 +10,7 @@ import {
   type QuickSelect,
   formatRangeLabel,
 } from '@/lib/date-ranges'
+import { useMediaQuery } from '@/lib/use-mobile'
 import { cn } from '@/lib/utils'
 
 const QUICK_ORDER: QuickSelect[] = [
@@ -53,6 +54,8 @@ export function DateRangePicker() {
   const [draft, setDraft] = useState<RDPRange | undefined>()
   const [compareDraft, setCompareDraft] = useState<RDPRange | undefined>()
   const ref = useRef<HTMLDivElement>(null)
+  const isMobile = useMediaQuery()
+  const calMonths = isMobile ? 1 : 2
 
   useEffect(() => {
     function onClick(e: MouseEvent) {
@@ -97,9 +100,9 @@ export function DateRangePicker() {
       </button>
 
       {open && (
-        <div className="absolute right-0 z-30 mt-2 w-[640px] max-w-[92vw] rounded-lg border border-border bg-card p-3 shadow-lg">
-          <div className="flex gap-3">
-            <ul className="w-44 shrink-0 space-y-0.5">
+        <div className="absolute right-0 z-30 mt-2 max-h-[80vh] w-[640px] max-w-[92vw] overflow-y-auto rounded-lg border border-border bg-card p-3 shadow-lg">
+          <div className="flex flex-col gap-3 lg:flex-row">
+            <ul className="grid shrink-0 grid-cols-2 gap-0.5 lg:block lg:w-44 lg:space-y-0.5">
               {QUICK_ORDER.map((q) => (
                 <li key={q}>
                   <button
@@ -119,12 +122,12 @@ export function DateRangePicker() {
               ))}
             </ul>
 
-            <div className="min-w-0 flex-1 border-l border-border pl-3">
+            <div className="min-w-0 flex-1 border-t border-border pt-3 lg:border-l lg:border-t-0 lg:pl-3 lg:pt-0">
               {showCalendar ? (
                 <div>
                   <DayPicker
                     mode="range"
-                    numberOfMonths={2}
+                    numberOfMonths={calMonths}
                     selected={draft}
                     onSelect={setDraft}
                     defaultMonth={new Date(range.from)}
@@ -201,7 +204,7 @@ export function DateRangePicker() {
                       <div>
                         <DayPicker
                           mode="range"
-                          numberOfMonths={2}
+                          numberOfMonths={calMonths}
                           selected={compareDraft}
                           onSelect={setCompareDraft}
                         />
