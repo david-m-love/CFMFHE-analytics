@@ -56,6 +56,8 @@ function monthBuckets(): SubscriberMonth[] {
   return out
 }
 
+const errMsg = (e: unknown) => (e instanceof Error ? e.message : 'failed')
+
 export async function getKlaviyoOverview(
   from: string,
   to: string,
@@ -70,47 +72,68 @@ export async function getKlaviyoOverview(
     }
   }
 
+  // Fetch the two pieces independently so one failure doesn't blank the page,
+  // and capture the exact status so we can diagnose without server logs.
+  const problems: string[] = []
+  let lists: ListCount[] = []
+  let monthly = monthBuckets()
+  let capped = false
+
   try {
-    const lists = await fetchLists(v.apiKey)
-    const { monthly, capped } = await fetchNewByMonth(v.apiKey)
-
-    const totalContacts = lists.reduce((max, l) => Math.max(max, l.count), 0)
-    const fromM = from.slice(0, 7)
-    const toM = to.slice(0, 7)
-    const newContacts = monthly
-      .filter((m) => m.month >= fromM && m.month <= toM)
-      .reduce((s, m) => s + m.count, 0)
-    const monthsWithData = monthly.filter((m) => m.count > 0).length || 1
-    const newPerMonthAvg = Math.round(monthly.reduce((s, m) => s + m.count, 0) / monthsWithData)
-    const prior = Math.max(1, totalContacts - newContacts)
-
-    return {
-      status: 'connected',
-      updatedAt: new Date().toISOString(),
-      data: {
-        totalContacts,
-        newContacts,
-        newPerMonthAvg,
-        growthRatePct: round(newContacts / prior),
-        monthly,
-        lists,
-        capped,
-      },
-    }
+    lists = await fetchLists(v.apiKey)
   } catch (e) {
-    console.error('[klaviyo] overview failed:', e)
+    problems.push(errMsg(e))
+  }
+  try {
+    const r = await fetchNewByMonth(v.apiKey)
+    monthly = r.monthly
+    capped = r.capped
+  } catch (e) {
+    problems.push(errMsg(e))
+  }
+
+  const gotLists = lists.length > 0
+  const gotMonthly = monthly.some((m) => m.count > 0)
+
+  // Total failure → sample data, but report exactly which calls failed.
+  if (!gotLists && !gotMonthly) {
     return {
       status: 'disconnected',
       updatedAt: null,
       data: sampleOverview(from, to),
-      note: 'Klaviyo is connected but the request failed — showing sample data.',
+      note: `Klaviyo request failed (${problems.join('; ') || 'no data'}) — showing sample data. A 401/403 usually means the API key lacks List/Profiles read access.`,
     }
+  }
+
+  const totalContacts = lists.reduce((max, l) => Math.max(max, l.count), 0)
+  const fromM = from.slice(0, 7)
+  const toM = to.slice(0, 7)
+  const newContacts = monthly
+    .filter((m) => m.month >= fromM && m.month <= toM)
+    .reduce((s, m) => s + m.count, 0)
+  const monthsWithData = monthly.filter((m) => m.count > 0).length || 1
+  const newPerMonthAvg = Math.round(monthly.reduce((s, m) => s + m.count, 0) / monthsWithData)
+  const prior = Math.max(1, totalContacts - newContacts)
+
+  return {
+    status: problems.length ? 'disconnected' : 'connected',
+    updatedAt: new Date().toISOString(),
+    data: {
+      totalContacts,
+      newContacts,
+      newPerMonthAvg,
+      growthRatePct: round(newContacts / prior),
+      monthly,
+      lists,
+      capped,
+    },
+    note: problems.length ? `Partial Klaviyo data — ${problems.join('; ')}.` : undefined,
   }
 }
 
 /** Lists and their profile counts. */
 async function fetchLists(apiKey: string): Promise<ListCount[]> {
-  const res = await fetch(`${BASE}/lists/?additional-fields[list]=profile_count`, {
+  const res = await fetch(`${BASE}/lists/?additional-fields%5Blist%5D=profile_count`, {
     headers: headers(apiKey),
   })
   if (!res.ok) throw new Error(`lists ${res.status}`)
@@ -130,7 +153,7 @@ async function fetchNewByMonth(apiKey: string): Promise<{ monthly: SubscriberMon
 
   let url: string | null =
     `${BASE}/profiles/?filter=${encodeURIComponent(`greater-or-equal(created,${earliest})`)}` +
-    `&sort=-created&fields[profile]=created&page[size]=100`
+    `&sort=-created&fields%5Bprofile%5D=created&page%5Bsize%5D=100`
   let pages = 0
   let capped = false
 
