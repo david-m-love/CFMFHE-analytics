@@ -8,52 +8,79 @@ import { MEMBERSHIP_PRODUCT_TYPES } from '@/types'
 import { DATES } from './config'
 
 /**
- * Classify a product (by name + price) into a ProductType.
- * Kept here (not in components) so the rules live in one place.
+ * Classify a product into a ProductType.
+ *
+ * The product NAME alone is unreliable (the same plan has been called both
+ * "Digital Membership - Monthly" and "Digital Subscription - Monthly"). So we
+ * also use a `hint` built from the WooCommerce Product Type, SKU, categories,
+ * and variation (e.g. "Variable subscription … digital-001 … Subscriptions …
+ * Options: Monthly"). This lets every membership variant — regardless of its
+ * display name — consolidate into the correct period bucket.
+ *
+ * Rules live here (not in components) so they're tunable in one place.
  */
 export function classifyProduct(
   productName: string,
   netSales: number,
   source: StoreSource,
+  hint = '',
 ): ProductType {
-  const name = productName.toLowerCase()
+  const text = `${productName} ${hint}`.toLowerCase()
 
-  if (name.includes('flipbook') || name.includes('essential conversations')) {
+  // EC flipbook (Shopify "Essential Conversations" flipbook)
+  if (text.includes('flipbook') || text.includes('essential conversations')) {
     return 'ec_flipbook'
   }
-  // Shopify workbook-only subscription
-  if (source === 'ec' && name.includes('workbook')) {
-    return 'workbook_only'
+
+  // Recurring membership / subscription signals: WC type "Variable
+  // subscription", a "Subscriptions" category, a digital-/workbook- SKU, or the
+  // words membership/subscription in the name.
+  const isSubscription =
+    /subscription/.test(text) ||
+    /membership/.test(text) ||
+    /\b(?:digital|workbook)-\d+\b/.test(text)
+
+  const isWorkbook = /workbook/.test(text)
+
+  // Period: prefer the variation/SKU/name signal. Order matters — semiannual is
+  // checked before yearly because "semiannual" contains "annual"; the generic
+  // "month" check comes last so "6 month"/"3 month" resolve correctly first.
+  const period: 'yearly' | 'semiannual' | 'quarterly' | 'monthly' | null =
+    /semi|bian|6[\s-]*month|six[\s-]*month/.test(text)
+      ? 'semiannual'
+      : /quarter|3[\s-]*month|three[\s-]*month/.test(text)
+        ? 'quarterly'
+        : /year|annual/.test(text)
+          ? 'yearly'
+          : /month/.test(text)
+            ? 'monthly'
+            : null
+
+  if (isSubscription) {
+    // Shopify workbook-only store subscription
+    if (source === 'ec' && isWorkbook) return 'workbook_only'
+    // Workbook + digital recurring membership (treated as monthly recurring)
+    if (isWorkbook) return 'workbook_monthly'
+    switch (period) {
+      case 'yearly':
+        return 'digital_yearly'
+      case 'semiannual':
+        return 'digital_semiannual'
+      case 'quarterly':
+        return 'digital_quarterly'
+      default:
+        return 'digital_monthly' // monthly, or a membership with no explicit period
+    }
   }
-  if (name.includes('workbook')) {
-    return 'workbook_monthly'
-  }
-  if (name.includes('annual') || name.includes('yearly') || name.includes('year')) {
-    return 'digital_yearly'
-  }
-  if (name.includes('semi') || name.includes('6 month') || name.includes('six month')) {
-    return 'digital_semiannual'
-  }
-  if (name.includes('quarter') || name.includes('3 month')) {
-    return 'digital_quarterly'
-  }
-  if (
-    name.includes('membership') ||
-    name.includes('digital') ||
-    name.includes('monthly')
-  ) {
-    return 'digital_monthly'
-  }
-  if (
-    name.includes('easter') ||
-    name.includes('christmas') ||
-    name.includes('conference') ||
-    name.includes('advent') ||
-    name.includes('countdown') ||
-    name.includes('seasonal')
-  ) {
+
+  // Non-subscription Shopify workbook (one-time)
+  if (source === 'ec' && isWorkbook) return 'workbook_only'
+
+  // One-time seasonal products
+  if (/easter|christmas|conference|advent|countdown|seasonal/.test(text)) {
     return 'seasonal'
   }
+
   return 'other'
 }
 
@@ -106,12 +133,15 @@ export function buildOrder(input: {
   status: string
   coupon: string | null
   attribution: string | null
+  /** extra text (WC product type, SKU, categories, variation) for classification */
+  classifyHint?: string
 }): Order {
   const primaryProduct = input.productNames[0] ?? ''
   const productType = classifyProduct(
     primaryProduct,
     input.netSales,
     input.source,
+    input.classifyHint ?? '',
   )
   return {
     ...input,

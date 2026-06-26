@@ -76,6 +76,12 @@ export interface SheetColumnMap {
   customerType: string | null
   customerTotalOrders?: string | null
   products: string | null
+  /** Extra columns used only to classify product type (WC product type, SKU,
+   * categories, variation). Combined into a hint string for classifyProduct. */
+  wcProductType?: string | null
+  sku?: string | null
+  categories?: string | null
+  variation?: string | null
   itemsSold: string | null
   netSales: string | null
   coupon: string | null
@@ -101,6 +107,10 @@ export const SHEET_MAPPING: { woocommerce: SheetSourceMap; shopify: SheetSourceM
       customerType: null, // derived from Customer Total orders + email identity
       customerTotalOrders: 'Customer Total orders',
       products: 'Product Name',
+      wcProductType: 'Product Type', // "Variable subscription" = membership
+      sku: 'SKU', // digital-001 = monthly, digital-002 = yearly, etc.
+      categories: 'Product Categories', // "Digital, Subscriptions" = membership
+      variation: 'Product Variation', // "Options: Monthly" / "Options: Yearly"
       itemsSold: 'Product Quantity',
       netSales: 'Product Total', // line-item revenue (avoids double-counting order totals)
       coupon: 'Coupons Codes',

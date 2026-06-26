@@ -5,7 +5,12 @@ import { PRODUCT_TYPE_LABELS } from '@/types'
 // attributed to each order's PRIMARY product (productNames[0]); units use
 // itemsSold. Good enough for ranking/sales; refine later with line-item prices.
 
+// Memberships consolidate under their canonical type label so the same plan
+// under different historical names (e.g. "Digital Membership - Monthly" and
+// "Digital Subscription - Monthly") rolls up into one line. Non-membership
+// products keep their own product name.
 function primaryName(o: Order): string {
+  if (o.isMembership) return PRODUCT_TYPE_LABELS[o.productType]
   return o.productNames[0]?.trim() || 'Unknown product'
 }
 

@@ -47,6 +47,10 @@ function rowsToOrders(
   const iCoupon = idx(c.coupon)
   const iAttr = idx(c.attribution)
   const iEmail = idx(c.email)
+  const iWcType = idx(c.wcProductType ?? null)
+  const iSku = idx(c.sku ?? null)
+  const iCategories = idx(c.categories ?? null)
+  const iVariation = idx(c.variation ?? null)
 
   // Exports are line-item level (one row per product). Group rows that share an
   // Order Id back into a single order so order counts / AOV are accurate and a
@@ -66,6 +70,7 @@ function rowsToOrders(
     status: string
     coupon: string | null
     attribution: string | null
+    classifyHint: string
   }
   const groups = new Map<string, Group>()
 
@@ -125,6 +130,14 @@ function rowsToOrders(
       status: iStatus >= 0 ? (row[iStatus] ?? '') : 'Completed',
       coupon: iCoupon >= 0 ? (row[iCoupon] || null) : null,
       attribution: iAttr >= 0 ? (row[iAttr] || null) : null,
+      classifyHint: [
+        iVariation >= 0 ? row[iVariation] : '',
+        iCategories >= 0 ? row[iCategories] : '',
+        iSku >= 0 ? row[iSku] : '',
+        iWcType >= 0 ? row[iWcType] : '',
+      ]
+        .filter(Boolean)
+        .join(' '),
     })
   }
 
@@ -142,6 +155,7 @@ function rowsToOrders(
       status: g.status,
       coupon: g.coupon,
       attribution: g.attribution,
+      classifyHint: g.classifyHint,
     }),
   )
 }
