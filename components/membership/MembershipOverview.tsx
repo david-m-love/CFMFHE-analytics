@@ -39,6 +39,8 @@ import {
   newMemberRevenue,
   newMembers,
   planBreakdown,
+  returningMemberRevenue,
+  returningMembers,
 } from '@/lib/metrics'
 import { getLtvAnalysis } from '@/lib/ltv'
 import { formatCurrency, formatNumber } from '@/lib/utils'
@@ -53,11 +55,6 @@ const PLAN_COLORS: Record<string, string> = {
   digital_quarterly: '#C4A030',
   workbook_monthly: '#D07830',
   workbook_only: '#A04878',
-}
-
-function avgPerMember(orders: ReturnType<typeof useFilteredOrders>) {
-  const m = estimatedActiveMembers(orders)
-  return m ? membershipRevenue(orders) / m : 0
 }
 
 export function MembershipOverview() {
@@ -97,37 +94,42 @@ export function MembershipOverview() {
 
   return (
     <div>
-      {/* KPIs — revenue + quantity together */}
+      {/* KPIs — lead with revenue; member count secondary. New + Returning sum to Total. */}
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard
-          label="Active Members"
-          value={estimatedActiveMembers(filtered)}
-          previous={cmp ? estimatedActiveMembers(cmp) : undefined}
-          format="number"
-          info="activeMembers"
-          secondaryValue={estimatedMrr(filtered)}
-          secondaryFormat="currency"
-          secondaryLabel="MRR"
-        />
-        <KpiCard
-          label="New Members"
-          value={newMembers(filtered)}
-          previous={cmp ? newMembers(cmp) : undefined}
-          format="number"
-          secondaryValue={newMemberRevenue(filtered)}
-          secondaryFormat="currency"
-        />
-        <KpiCard
-          label="Membership Revenue"
+          label="Total Membership"
           value={membershipRevenue(filtered)}
           previous={cmp ? membershipRevenue(cmp) : undefined}
           format="currency"
+          info="activeMembers"
+          secondaryValue={estimatedActiveMembers(filtered)}
+          secondaryFormat="number"
+          secondaryLabel="members"
         />
         <KpiCard
-          label="Avg Revenue / Member"
-          value={avgPerMember(filtered)}
-          previous={cmp ? avgPerMember(cmp) : undefined}
+          label="New Members"
+          value={newMemberRevenue(filtered)}
+          previous={cmp ? newMemberRevenue(cmp) : undefined}
           format="currency"
+          secondaryValue={newMembers(filtered)}
+          secondaryFormat="number"
+          secondaryLabel="new"
+        />
+        <KpiCard
+          label="Returning Members"
+          value={returningMemberRevenue(filtered)}
+          previous={cmp ? returningMemberRevenue(cmp) : undefined}
+          format="currency"
+          secondaryValue={returningMembers(filtered)}
+          secondaryFormat="number"
+          secondaryLabel="returning"
+        />
+        <KpiCard
+          label="MRR"
+          value={estimatedMrr(filtered)}
+          previous={cmp ? estimatedMrr(cmp) : undefined}
+          format="currency"
+          info="mrr"
         />
       </div>
 

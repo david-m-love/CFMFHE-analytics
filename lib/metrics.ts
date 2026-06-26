@@ -27,6 +27,13 @@ export function newMembers(orders: Order[]): number {
   ).length
 }
 
+/** Count of returning-customer paid membership orders (complements newMembers). */
+export function returningMembers(orders: Order[]): number {
+  return orders.filter(
+    (o) => o.isMembership && o.customerType !== 'new' && o.netSales > 0,
+  ).length
+}
+
 export function freeTrialStarts(orders: Order[]): number {
   return orders.filter((o) => o.isFreeTrial).length
 }
