@@ -14,6 +14,7 @@ import {
   stageValue,
   type StageKpi,
 } from '@/lib/funnel'
+import { useMediaQuery } from '@/lib/use-mobile'
 import { cn, formatCurrency, formatNumber, pctDelta } from '@/lib/utils'
 
 function daysBetween(from: string, to: string) {
@@ -60,7 +61,8 @@ export function MembershipFunnel() {
   const orders = useFilteredOrders()
   const compare = useCompareOrders()
   const { range, compareSelect, compareEnabled } = useDashboard()
-  const [activeIdx, setActiveIdx] = useState(4) // default: Convert
+  const [activeIdx, setActiveIdx] = useState<number | null>(4) // default: Convert
+  const isMobile = useMediaQuery()
 
   const days = daysBetween(range.from, range.to)
   const cmpSuffix = compareSelect === 'previous_year' ? 'vs LY' : 'vs prev'
@@ -81,7 +83,7 @@ export function MembershipFunnel() {
   )
 
   const maxV = Math.max(1, ...stages.map((s) => s.current))
-  const active = stages[activeIdx]
+  const active = activeIdx != null ? stages[activeIdx] : null
 
   if (loading) {
     return <div className="h-96 animate-pulse rounded-lg border border-border bg-card" />
@@ -172,7 +174,7 @@ export function MembershipFunnel() {
                 <div key={s.def.key}>
                   {connector}
                   <button
-                    onClick={() => setActiveIdx(i)}
+                    onClick={() => setActiveIdx(activeIdx === i ? null : i)}
                     className={cn(
                       'flex w-full items-stretch overflow-hidden rounded-lg border-2 text-left transition-transform hover:translate-x-0.5',
                       activeIdx === i ? 'border-current' : 'border-transparent',
@@ -218,6 +220,21 @@ export function MembershipFunnel() {
                       </span>
                     </span>
                   </button>
+
+                  {/* Mobile: detail opens as an accordion right under the stage */}
+                  {isMobile && activeIdx === i && (
+                    <div
+                      className="mt-1 rounded-lg border-l-2 bg-card p-4"
+                      style={{ borderColor: s.def.color }}
+                    >
+                      <DetailPanel
+                        stage={s}
+                        days={days}
+                        cmpSuffix={cmpSuffix}
+                        compareEnabled={compareEnabled}
+                      />
+                    </div>
+                  )}
                 </div>
               )
             })}
@@ -227,14 +244,20 @@ export function MembershipFunnel() {
           <ConversionKey stages={stages} />
         </div>
 
-        {/* Detail panel */}
-        <div className="rounded-lg border border-border bg-card p-4 lg:sticky lg:top-4 lg:self-start">
-          <DetailPanel
-            stage={active}
-            days={days}
-            cmpSuffix={cmpSuffix}
-            compareEnabled={compareEnabled}
-          />
+        {/* Detail panel (desktop only; mobile shows it inline as an accordion) */}
+        <div className="hidden rounded-lg border border-border bg-card p-4 lg:block lg:sticky lg:top-4 lg:self-start">
+          {active ? (
+            <DetailPanel
+              stage={active}
+              days={days}
+              cmpSuffix={cmpSuffix}
+              compareEnabled={compareEnabled}
+            />
+          ) : (
+            <p className="py-12 text-center text-sm text-text-3">
+              Click a stage to see its details.
+            </p>
+          )}
         </div>
       </div>
     </div>
