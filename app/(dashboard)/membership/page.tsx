@@ -1,22 +1,40 @@
 import { PageHeader } from '@/components/page-header'
-import { ComingSoon } from '@/components/coming-soon'
+import { MembershipFunnel } from '@/components/membership/MembershipFunnel'
+
+const TABS = [
+  { label: 'Funnel', active: true },
+  { label: 'Overview', active: false },
+  { label: 'Cohorts', active: false },
+  { label: 'LTV', active: false },
+]
 
 export default function MembershipPage() {
   return (
     <>
       <PageHeader
         title="Membership"
-        description="Deep dive on membership health — the most important view."
+        description="The acquisition & retention funnel — from reach to long-term members."
       />
-      <ComingSoon
-        phase="Phase 2–3"
-        items={[
-          'Active members & MRR by plan type ($10 vs $12 monthly, yearly, semiannual, quarterly, workbook)',
-          '8-stage acquisition funnel (volume / revenue toggle, drop-off %)',
-          'Quarterly cohort retention heat map + January YoY comparison',
-          'LTV by plan type, distribution buckets, and monthly→annual upgrade analysis',
-        ]}
-      />
+
+      <div className="mb-5 flex items-center gap-1 border-b border-border">
+        {TABS.map((t) => (
+          <span
+            key={t.label}
+            className={
+              t.active
+                ? 'relative -mb-px border-b-2 border-accent-blue px-3 py-2 text-sm font-medium text-ink'
+                : 'px-3 py-2 text-sm text-text-3'
+            }
+          >
+            {t.label}
+            {!t.active && (
+              <span className="ml-1 font-mono text-[9px] uppercase text-text-3">soon</span>
+            )}
+          </span>
+        ))}
+      </div>
+
+      <MembershipFunnel />
     </>
   )
 }

@@ -56,6 +56,24 @@ export function estimatedMrr(orders: Order[]): number {
   )
 }
 
+/** Membership revenue from first-time (new-customer) paid orders. */
+export function newMemberRevenue(orders: Order[]): number {
+  return round(
+    orders
+      .filter((o) => o.isMembership && o.customerType === 'new' && !o.isFreeTrial && o.netSales > 0)
+      .reduce((s, o) => s + o.netSales, 0),
+  )
+}
+
+/** Membership revenue from returning customers (renewals / repeat). */
+export function returningMemberRevenue(orders: Order[]): number {
+  return round(
+    orders
+      .filter((o) => o.isMembership && o.customerType !== 'new' && o.netSales > 0)
+      .reduce((s, o) => s + o.netSales, 0),
+  )
+}
+
 export interface MonthlyRevenuePoint {
   month: string // YYYY-MM
   label: string

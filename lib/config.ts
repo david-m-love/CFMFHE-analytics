@@ -46,6 +46,14 @@ export const DATES = {
   ecStoreLaunch: '2025-11-01',
 } as const
 
+// Membership funnel tuning. Retention is an estimate applied to converts
+// (real cohort retention lands in the Cohorts tab). Placeholder multipliers
+// scale the illustrative top-of-funnel stages until GA4 + Klaviyo connect.
+export const FUNNEL = {
+  retention: { month3: 0.6, month6: 0.4, month12: 0.27 },
+  placeholderMultipliers: { reach: 470, consider: 47, engage: 13 },
+} as const
+
 // January is anomalously high (New Year curriculum campaign). Flag, don't hide.
 export const JANUARY_ANOMALY_NOTE =
   'January is seasonally elevated (New Year Come Follow Me campaign) and is not representative of baseline.'
