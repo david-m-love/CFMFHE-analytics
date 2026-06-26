@@ -8,6 +8,7 @@ import {
   LayoutDashboard,
   Mail,
   Package,
+  PlugZap,
   TrendingUp,
 } from 'lucide-react'
 import { Logo } from './logo'
@@ -20,6 +21,7 @@ const NAV = [
   { href: '/email', label: 'Email & SMS', icon: Mail },
   { href: '/traffic', label: 'Traffic', icon: BarChart3 },
   { href: '/ai', label: 'Ask Anything', icon: Bot },
+  { href: '/connections', label: 'Connections', icon: PlugZap },
 ]
 
 export function Sidebar() {
