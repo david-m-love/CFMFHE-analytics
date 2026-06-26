@@ -1,6 +1,7 @@
 'use client'
 
 import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { DayPicker, type DateRange as RDPRange } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 import { ArrowLeft, ArrowLeftRight, CalendarDays, Check, ChevronDown, X } from 'lucide-react'
@@ -49,7 +50,10 @@ function Sheet({
   onBack?: () => void
   children: React.ReactNode
 }) {
-  return (
+  if (typeof document === 'undefined') return null
+  // Portal to <body> so the fixed overlay isn't trapped by the header's
+  // backdrop-filter containing block (which would anchor it to the top bar).
+  return createPortal(
     <div className="fixed inset-0 z-[60]">
       <button aria-label="Close" className="absolute inset-0 bg-black/40" onClick={onClose} />
       <div className="absolute inset-x-0 bottom-0 max-h-[88vh] overflow-y-auto rounded-t-2xl bg-card p-4 shadow-xl sm:inset-x-auto sm:bottom-auto sm:left-1/2 sm:top-1/2 sm:w-[560px] sm:max-w-[92vw] sm:-translate-x-1/2 sm:-translate-y-1/2 sm:rounded-2xl">
@@ -70,7 +74,8 @@ function Sheet({
         </div>
         {children}
       </div>
-    </div>
+    </div>,
+    document.body,
   )
 }
 
