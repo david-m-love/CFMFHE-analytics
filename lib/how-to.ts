@@ -19,47 +19,43 @@ export const GUIDES: Record<string, Guide> = {
     slug: 'shopify-direct-api',
     title: 'Connect Shopify (direct API)',
     intro:
-      'This connects the Essential Conversations store via the Admin API so orders flow in live. Create the app from your STORE ADMIN (Settings → Apps and sales channels → Develop apps), NOT the Shopify Partners dashboard. After you Install it, Shopify reveals an "Admin API access token" — that is the value you paste here. The prefix (shpat_, etc.) does not matter and this dashboard does not check it; what matters is that it is the value under "Admin API access token", not the "API secret key" or "API key" (those are OAuth client credentials and will be rejected with a 401).',
-    estimate: '~10 minutes',
+      'Connects the Essential Conversations store via the Admin API so orders flow in live. IMPORTANT (Jan 2026 change): you can no longer create custom apps in the Shopify admin — new apps are made in the Shopify DEV DASHBOARD (dev.shopify.com/dashboard) and give you a Client ID + Client Secret instead of a static token. Paste those here and the dashboard fetches a short-lived token for you automatically. (Have a pre-2026 custom app with a real Admin API access token? Use the legacy token field instead and leave Client ID/Secret blank.)',
+    estimate: '~15 minutes (plus possible approval wait for customer data)',
     steps: [
       {
-        title: 'Open app development in Shopify (store admin, NOT Partners)',
+        title: 'Create the app in the Dev Dashboard',
         detail:
-          'In your Shopify STORE admin, go to Settings (bottom-left) → "Apps and sales channels" → click "Develop apps" (top-right). If prompted, click "Allow custom app development" and confirm. Do NOT use the Shopify Partners dashboard — a Partners app only gives an API key + secret and needs an OAuth flow, which is why you won\'t see a ready access token there.',
+          'Go to dev.shopify.com/dashboard → Apps → "Create app" (top right) → "Start from Dev Dashboard" → name it "CFMFHE Analytics" → Create. (This replaces the old "Develop apps" flow in the store admin, which is gone for new apps as of Jan 1, 2026.)',
       },
       {
-        title: 'Create a custom app',
+        title: 'Create a version with your scopes',
         detail:
-          'Click "Create an app", name it "CFMFHE Analytics", pick yourself as the app developer, and click "Create app".',
+          'Open the Versions tab. Set the app URL (if you have none, use https://shopify.dev/apps/default-app-home), pick the newest Webhooks API version, and add access scopes: read_orders, read_products, read_all_orders (read_all_orders is required or you only get the last 60 days). Click "Release". An app needs at least one released version before it can be installed.',
       },
       {
-        title: 'Grant read access (including full order history)',
+        title: 'Request protected customer data (if you need names/emails)',
         detail:
-          'Configuration tab → "Admin API integration" → Configure → enable: read_orders, read_products, AND read_all_orders. The read_all_orders scope is important — without it Shopify only returns the LAST 60 DAYS of orders. Click Save. (Toggling read_all_orders may ask for a short reason; that\'s normal.)',
+          'To read customer name/email on orders, request "Protected customer data access" for the app. Shopify approval can take a few days. Orders, products, and revenue work without it; cross-store customer matching for this store is limited until it’s granted.',
       },
       {
-        title: 'Enable Protected customer data access',
+        title: 'Install on the store',
         detail:
-          'Still on Configuration, find "Protected customer data access" → request/enable it and tick "Customer name" and "Email". Orders include customer info, so without this you can get a 401/403 or blank customer fields. On your own store\'s custom app you can grant this yourself — no Shopify review needed.',
+          'From the app’s Home in the Dev Dashboard, scroll down → "Install app" → select the Essential Conversations store → Install.',
       },
       {
-        title: 'Install the app',
-        detail: 'Go to the "API credentials" tab → click "Install app" → confirm Install. (The access token only appears AFTER installing.)',
-      },
-      {
-        title: 'Copy the Admin API access token',
+        title: 'Copy the Client ID and Client Secret',
         detail:
-          'Still on "API credentials", under "Admin API access token" click "Reveal token once" and copy it. Depending on Shopify\'s token format it may start with shpat_, shpss_, or atkn_ — any of these is correct; the prefix doesn\'t matter. (The "API key" hex string and the "API secret key" are the OAuth Client ID/Secret — not used here.) Shopify shows the token only once.',
+          'In the app’s Settings / Overview, copy the Client ID and Client Secret. NOTE: there is no copy-paste access token anymore — these credentials are exchanged for a short-lived token automatically by this dashboard (client-credentials grant, refreshed every ~24h).',
       },
       {
         title: 'Find your store domain',
         detail:
-          'Use the ".myshopify.com" address (e.g. essential-conversations.myshopify.com), NOT the public custom domain — the Admin API only answers on the myshopify domain. Find it in Settings → Domains, or it\'s the part before /admin in your admin URL.',
+          'Use the ".myshopify.com" address (e.g. essential-conversations.myshopify.com), not the public custom domain — the Admin API only answers on the myshopify domain.',
       },
       {
         title: 'Connect it here',
         detail:
-          'Connections → Shopify → Connect. Paste the store domain and the Admin API access token (any prefix), then "Test & Save". It should turn green and show your shop name. Errors: "Token rejected" = wrong value (use the Admin API access token, not the API key/secret) / app not installed / protected data not granted; "returned 404" = wrong domain; green but few old orders = missing read_all_orders.',
+          'Connections → Shopify → Connect. Enter the store domain, Client ID, and Client Secret (leave the legacy token field blank), then "Test & Save". It should turn green with your shop name. Errors: "token grant 4xx" = wrong Client ID/Secret or app not installed on this store; "returned 404" = wrong domain; green but few old orders = missing read_all_orders scope.',
       },
     ],
   },

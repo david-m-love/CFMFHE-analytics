@@ -72,14 +72,19 @@ export const CONNECTION_DEFS: Record<ConnId, ConnDef> = {
     id: 'shopify',
     label: 'Shopify',
     description: 'Live orders from the Essential Conversations store',
-    setup: 'Create a custom app in Shopify, enable read_orders + read_products, install it, and copy the Admin API access token.',
+    setup:
+      'Since Jan 2026, new Shopify apps are created in the Dev Dashboard and give a Client ID + Secret (no static token). Enter those + your store domain and we fetch a short-lived token automatically. Legacy custom apps: leave Client ID/Secret blank and paste the Admin API access token instead.',
     docsSlug: 'shopify-direct-api',
     fields: [
       { key: 'storeDomain', label: 'Store domain', type: 'text', placeholder: 'your-store.myshopify.com' },
-      { key: 'accessToken', label: 'Admin API access token', type: 'password', placeholder: 'shpat_… / shpss_… / atkn_… (prefix doesn’t matter)' },
+      { key: 'clientId', label: 'Client ID (Dev Dashboard apps)', type: 'text', placeholder: 'from the app’s Settings / Overview' },
+      { key: 'clientSecret', label: 'Client Secret', type: 'password', placeholder: 'from the app’s Settings / Overview' },
+      { key: 'accessToken', label: 'Admin API access token (legacy apps only)', type: 'password', placeholder: 'only for old custom apps — leave blank if using Client ID/Secret' },
     ],
     env: {
       storeDomain: 'SHOPIFY_STORE_DOMAIN',
+      clientId: 'SHOPIFY_CLIENT_ID',
+      clientSecret: 'SHOPIFY_CLIENT_SECRET',
       accessToken: 'SHOPIFY_ACCESS_TOKEN',
     },
   },

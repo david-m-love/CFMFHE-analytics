@@ -1,14 +1,63 @@
 import type { CustomerType, Order } from '@/types'
 import { buildOrder } from './orders'
 import { resolveCredential } from './credentials'
+import { kvGet, kvSet } from './credentials-store'
 
 const API_VERSION = '2026-01'
 const MAX_PAGES = 6 // up to ~1,500 recent orders
 const LOOKBACK_MONTHS = 18
 
+function cleanDomain(domain: string): string {
+  return domain.replace(/^https?:\/\//, '').replace(/\/$/, '')
+}
+
 function baseUrl(domain: string): string {
-  const clean = domain.replace(/^https?:\/\//, '').replace(/\/$/, '')
-  return `https://${clean}/admin/api/${API_VERSION}`
+  return `https://${cleanDomain(domain)}/admin/api/${API_VERSION}`
+}
+
+/**
+ * Resolve a usable Admin API access token. Legacy custom apps provide a static
+ * token (accessToken). Apps created in the Shopify Dev Dashboard (Jan 2026+)
+ * provide a Client ID + Secret and require the client-credentials grant to mint
+ * a short-lived (~24h) token — we fetch and cache it in KV until it nears expiry.
+ */
+export async function getShopifyToken(v: Record<string, string>): Promise<string> {
+  if (v.accessToken) return v.accessToken // legacy static token
+  if (!v.storeDomain || !v.clientId || !v.clientSecret) {
+    throw new Error('Shopify not configured (need a token, or Client ID + Secret).')
+  }
+  const domain = cleanDomain(v.storeDomain)
+  const cacheKey = `shopify:token:${domain}:${v.clientId}`
+
+  try {
+    const raw = await kvGet(cacheKey)
+    if (raw) {
+      const c = JSON.parse(raw) as { token: string; expiresAt: number }
+      if (c.token && c.expiresAt > Date.now()) return c.token
+    }
+  } catch {
+    /* ignore cache miss */
+  }
+
+  // Client credentials grant — MUST be form-encoded, not JSON.
+  const res = await fetch(`https://${domain}/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-www-form-urlencoded', accept: 'application/json' },
+    body: new URLSearchParams({
+      client_id: v.clientId,
+      client_secret: v.clientSecret,
+      grant_type: 'client_credentials',
+    }),
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => '')
+    throw new Error(`token grant ${res.status}. ${body.slice(0, 120).replace(/\s+/g, ' ').trim()}`)
+  }
+  const json = (await res.json()) as { access_token?: string; expires_in?: number }
+  if (!json.access_token) throw new Error('token grant returned no access_token')
+  const ttl = (json.expires_in ?? 86400) - 300 // refresh 5 min early
+  await kvSet(cacheKey, JSON.stringify({ token: json.access_token, expiresAt: Date.now() + ttl * 1000 })).catch(() => {})
+  return json.access_token
 }
 
 async function shopifyFetch(url: string, token: string, timeoutMs = 9000) {
@@ -101,7 +150,15 @@ function normalize(o: ShopifyOrder): Order {
 /** Live EC orders from Shopify. configured=false when not set up. */
 export async function getEcOrders(): Promise<{ configured: boolean; orders: Order[]; error?: string }> {
   const v = await resolveCredential('shopify')
-  if (!v.storeDomain || !v.accessToken) return { configured: false, orders: [] }
+  const hasAuth = v.accessToken || (v.clientId && v.clientSecret)
+  if (!v.storeDomain || !hasAuth) return { configured: false, orders: [] }
+
+  let token: string
+  try {
+    token = await getShopifyToken(v)
+  } catch (e) {
+    return { configured: true, orders: [], error: e instanceof Error ? e.message : 'Auth failed.' }
+  }
 
   const since = new Date()
   since.setMonth(since.getMonth() - LOOKBACK_MONTHS)
@@ -111,7 +168,7 @@ export async function getEcOrders(): Promise<{ configured: boolean; orders: Orde
   const orders: Order[] = []
   try {
     for (let page = 0; page < MAX_PAGES && url; page++) {
-      const res: Response = await shopifyFetch(url, v.accessToken)
+      const res: Response = await shopifyFetch(url, token)
       if (!res.ok) {
         if (page === 0) return { configured: true, orders: [], error: `Shopify returned ${res.status}.` }
         break

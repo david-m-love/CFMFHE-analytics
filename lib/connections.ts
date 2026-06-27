@@ -2,7 +2,7 @@ import { google } from 'googleapis'
 import { JWT } from 'google-auth-library'
 import { type ConnId, CONNECTION_DEFS, CONNECTION_ORDER } from './connection-defs'
 import { credentialSource, resolveCredential } from './credentials'
-import { testShopify } from './shopify'
+import { testShopify, getShopifyToken } from './shopify'
 import { quickbooksConnected } from './quickbooks'
 import { adsConnected } from './ads'
 
@@ -91,23 +91,37 @@ async function testShopifyConn(): Promise<ConnResult> {
   const m = meta('shopify')
   const source = await credentialSource('shopify')
   const v = await resolveCredential('shopify')
-  if (!v.storeDomain || !v.accessToken) {
+  const hasAuth = v.accessToken || (v.clientId && v.clientSecret)
+  if (!v.storeDomain || !hasAuth) {
     return {
       ...m,
       status: 'not_configured',
       source,
-      fix: 'Add your Shopify store domain and an Admin API access token.',
+      fix: 'Add your store domain plus either a Client ID + Secret (new Dev Dashboard apps) or an Admin API access token (legacy apps).',
       checkedAt: now(),
     }
   }
-  const res = await testShopify(v.storeDomain, v.accessToken)
+  let token: string
+  try {
+    token = await getShopifyToken(v)
+  } catch (e) {
+    return {
+      ...m,
+      status: 'error',
+      source,
+      detail: e instanceof Error ? e.message : 'Could not obtain an access token.',
+      fix: 'Confirm the Client ID/Secret are correct, the app is installed on this store, and the store domain matches.',
+      checkedAt: now(),
+    }
+  }
+  const res = await testShopify(v.storeDomain, token)
   if (!res.ok) {
     return {
       ...m,
       status: 'error',
       source,
       detail: res.error ?? 'Connection failed.',
-      fix: 'Check the store domain and that the custom app is installed with read_orders.',
+      fix: 'Check the store domain and that the app is installed with read_orders.',
       checkedAt: now(),
     }
   }
