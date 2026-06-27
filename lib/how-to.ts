@@ -127,41 +127,47 @@ export const GUIDES: Record<string, Guide> = {
     title: 'Connect WooCommerce (direct API)',
     intro:
       'Connects comefollowmefhe.com directly via the WooCommerce REST API (wc/v3) — the primary order source, including customer emails for accurate cross-store matching. This replaces the Google Sheets export as the live feed; Sheets automatically stays on as a backup if the API is ever unavailable. You generate a read-only key pair in WordPress and paste it here.',
-    estimate: '~10 minutes',
+    estimate: '~10–15 minutes',
     steps: [
       {
-        title: 'Enable pretty permalinks (most-missed step)',
+        title: 'Confirm WooCommerce 9.0+ and HTTPS',
         detail:
-          'In WordPress: Settings → Permalinks → choose ANY option except "Plain" (e.g. "Day and name") → Save. Plain permalinks cause a 404 on every API call.',
+          'The store must run WooCommerce 9.0+ (the modern wc/v3 API ships in core; the old legacy REST API was removed) and be served over HTTPS — comefollowmefhe.com already is. HTTPS is required because Basic Auth sends the key/secret base64-encoded, which is reversible without TLS.',
       },
       {
-        title: 'Open the REST API settings',
-        detail: 'WooCommerce → Settings → Advanced → REST API → click "Add key" (or "Create an API key").',
+        title: 'Enable pretty permalinks (the #1 missed step)',
+        detail:
+          'In WordPress admin: Settings → Permalinks → select ANY option except "Plain" (for example "Day and name" or "Post name") → Save Changes. With Plain permalinks every /wp-json/ API call returns a 404. If the API was already working you can leave this as-is.',
       },
       {
-        title: 'Create a read-only key',
+        title: 'Open the REST API key screen',
         detail:
-          'Description: "CFMFHE Analytics". User: an admin account. Permissions: Read (the dashboard only reads data). Click "Generate API key".',
+          'In WordPress admin: WooCommerce → Settings → Advanced → REST API. Click "Add key" (older versions say "Create an API key"). If you don\'t see "Advanced", make sure you\'re an admin and WooCommerce is active.',
       },
       {
-        title: 'Copy the Consumer key & secret',
+        title: 'Create a READ-ONLY key',
         detail:
-          'Copy the Consumer key (starts with ck_) and Consumer secret (starts with cs_). ⚠️ The secret is shown only once — copy it now.',
+          'Description: "CFMFHE Analytics Dashboard". User: pick an Administrator account (the key inherits that user\'s capabilities). Permissions: Read — the dashboard only reads orders, never writes. Click "Generate API key".',
       },
       {
-        title: 'Confirm HTTPS',
+        title: 'Copy the Consumer key & Consumer secret',
         detail:
-          'The store must be on HTTPS (it is — comefollowmefhe.com). Basic Auth sends the key encoded, so HTTPS is required to keep it safe.',
+          'After generating you\'ll see a Consumer key (starts with ck_) and Consumer secret (starts with cs_), each ~43 characters. ⚠️ The secret is displayed ONLY ONCE — copy both now and store them safely. If you lose the secret you simply revoke the key and create a new one.',
       },
       {
-        title: 'Connect it here',
+        title: 'Test the key before handing it over (optional but recommended)',
         detail:
-          'Connections → WooCommerce (direct API) → Connect. Paste the store URL (https://comefollowmefhe.com), Consumer key, and Consumer secret, then "Test & Save". Green = it becomes the primary source; orders refresh automatically (cached 6h).',
+          'From a terminal: curl https://comefollowmefhe.com/wp-json/wc/v3/orders -u ck_yourkey:cs_yoursecret -G --data-urlencode "per_page=1" — a 200 with a JSON order array confirms keys + permalinks + server config are all good. (Or in Postman: GET that URL, Auth tab → Basic Auth → key as Username, secret as Password.)',
       },
       {
-        title: 'If it fails',
+        title: 'Connect it in the dashboard',
         detail:
-          '404 = pretty permalinks not enabled (step 1). 401 = wrong key/secret or not HTTPS. 403 = key isn’t Read-enabled — regenerate it. "Consumer key is missing" = the host strips the Authorization header (rare; tell us and we’ll switch to query-param auth). Google Sheets keeps running as backup either way.',
+          'In this dashboard: Connections → WooCommerce (direct API) → Connect. Store URL: https://comefollowmefhe.com. Consumer key: ck_… Consumer secret: cs_… Then click "Test & Save". Green means it\'s now the PRIMARY order source; the first load pages through all orders and caches them (then refreshes every ~6 hours).',
+      },
+      {
+        title: 'If it fails — error → fix',
+        detail:
+          '404 on every call = pretty permalinks not enabled (step 2). 401 Unauthorized = wrong key/secret, or the store was reached over HTTP. 403 Forbidden = the key isn\'t Read-enabled — regenerate it. "Consumer key is missing" = the host strips the Authorization header (rare; add the .htaccess Authorization rewrite, or tell us and we\'ll switch the connector to query-param auth). Google Sheets stays the backup the whole time, so analytics never go dark.',
       },
     ],
   },
