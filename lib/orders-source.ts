@@ -1,28 +1,47 @@
 import type { DataEnvelope, Order } from '@/types'
 import { getSheetOrders } from './sheets'
+import { getWooOrders } from './woocommerce'
 import { getEcOrders } from './shopify'
 import { getMockOrders } from './mock-data'
 
 /**
- * Unified order feed. Merges WooCommerce (Google Sheets) and the EC store
- * (Shopify direct API) from whichever sources are connected. Falls back to a
- * sample dataset when nothing is connected, and degrades gracefully (returning
- * the sources that do work) if one fails.
+ * Unified order feed. comefollowmefhe.com orders come from the WooCommerce
+ * REST API (primary); if that isn't configured or fails, Google Sheets is the
+ * automatic backup. The EC store comes from Shopify. Falls back to sample data
+ * when nothing is connected, and degrades gracefully if a source fails.
  */
 export async function getOrders(): Promise<DataEnvelope<Order[]>> {
-  let sheet: { configured: boolean; orders: Order[] } = { configured: false, orders: [] }
-  let sheetError = false
-  try {
-    sheet = await getSheetOrders()
-  } catch (e) {
-    console.error('[sheets] failed:', e)
-    sheet = { configured: true, orders: [] }
-    sheetError = true
+  const problems: string[] = []
+
+  // ── comefollowmefhe.com: WooCommerce REST (primary) → Google Sheets (backup)
+  let cfmfhe: Order[] = []
+  let cfmfheConfigured = false
+
+  const woo = await getWooOrders() // never throws
+  if (woo.configured && !woo.error) {
+    cfmfhe = woo.orders
+    cfmfheConfigured = true
+  } else {
+    if (woo.configured && woo.error) {
+      problems.push(`WooCommerce API failed (${woo.error}) — using Google Sheets backup`)
+    }
+    try {
+      const sheet = await getSheetOrders()
+      if (sheet.configured) {
+        cfmfhe = sheet.orders
+        cfmfheConfigured = true
+      }
+    } catch (e) {
+      console.error('[sheets backup] failed:', e)
+      problems.push('Google Sheets backup unavailable')
+    }
   }
 
+  // ── Essential Conversations: Shopify
   const ec = await getEcOrders() // never throws
+  if (ec.configured && ec.error) problems.push(`Shopify: ${ec.error}`)
 
-  if (!sheet.configured && !ec.configured) {
+  if (!cfmfheConfigured && !ec.configured) {
     return {
       status: 'mock',
       updatedAt: null,
@@ -31,11 +50,7 @@ export async function getOrders(): Promise<DataEnvelope<Order[]>> {
     }
   }
 
-  const orders = [...sheet.orders, ...ec.orders]
-  const problems: string[] = []
-  if (sheetError) problems.push('Google Sheets unavailable')
-  if (ec.configured && ec.error) problems.push(`Shopify: ${ec.error}`)
-
+  const orders = [...cfmfhe, ...ec.orders]
   return {
     status: problems.length && orders.length === 0 ? 'disconnected' : 'connected',
     updatedAt: new Date().toISOString(),

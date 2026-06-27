@@ -5,6 +5,7 @@ import { credentialSource, resolveCredential } from './credentials'
 import { testShopify, getShopifyToken } from './shopify'
 import { quickbooksConnected } from './quickbooks'
 import { adsConnected } from './ads'
+import { testWoocommerce } from './woocommerce'
 
 export type { ConnId } from './connection-defs'
 export { CONNECTION_ORDER } from './connection-defs'
@@ -49,6 +50,34 @@ function errMessage(e: unknown): string {
 function meta(id: ConnId) {
   const d = CONNECTION_DEFS[id]
   return { id, label: d.label, description: d.description }
+}
+
+async function testWoo(): Promise<ConnResult> {
+  const m = meta('woocommerce')
+  const source = await credentialSource('woocommerce')
+  const v = await resolveCredential('woocommerce')
+  if (!v.storeUrl || !v.consumerKey || !v.consumerSecret) {
+    return {
+      ...m,
+      status: 'not_configured',
+      source,
+      detail: 'Running on the Google Sheets backup.',
+      fix: 'Add your store URL, Consumer key (ck_), and Consumer secret (cs_).',
+      checkedAt: now(),
+    }
+  }
+  const r = await testWoocommerce()
+  if (!r.ok) {
+    return {
+      ...m,
+      status: 'error',
+      source,
+      detail: r.error ?? 'Connection failed.',
+      fix: '404 = enable pretty permalinks; 401 = wrong key/secret or not HTTPS; 403 = key needs Read access. Google Sheets stays as backup.',
+      checkedAt: now(),
+    }
+  }
+  return { ...m, status: 'connected', source, detail: `Linked to ${r.store}. Primary order source.`, checkedAt: now() }
 }
 
 async function testSheets(): Promise<ConnResult> {
@@ -276,6 +305,7 @@ async function testGoogleAds(): Promise<ConnResult> {
 }
 
 const TESTS: Record<ConnId, () => Promise<ConnResult>> = {
+  woocommerce: testWoo,
   sheets: testSheets,
   shopify: testShopifyConn,
   klaviyo: testKlaviyo,

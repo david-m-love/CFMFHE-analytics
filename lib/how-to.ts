@@ -122,6 +122,49 @@ export const GUIDES: Record<string, Guide> = {
       { title: 'Authorize', detail: 'Click "Connect with Google Ads", choose your Google account, and approve. You\'ll return here connected.' },
     ],
   },
+  'woocommerce-rest-api': {
+    slug: 'woocommerce-rest-api',
+    title: 'Connect WooCommerce (direct API)',
+    intro:
+      'Connects comefollowmefhe.com directly via the WooCommerce REST API (wc/v3) — the primary order source, including customer emails for accurate cross-store matching. This replaces the Google Sheets export as the live feed; Sheets automatically stays on as a backup if the API is ever unavailable. You generate a read-only key pair in WordPress and paste it here.',
+    estimate: '~10 minutes',
+    steps: [
+      {
+        title: 'Enable pretty permalinks (most-missed step)',
+        detail:
+          'In WordPress: Settings → Permalinks → choose ANY option except "Plain" (e.g. "Day and name") → Save. Plain permalinks cause a 404 on every API call.',
+      },
+      {
+        title: 'Open the REST API settings',
+        detail: 'WooCommerce → Settings → Advanced → REST API → click "Add key" (or "Create an API key").',
+      },
+      {
+        title: 'Create a read-only key',
+        detail:
+          'Description: "CFMFHE Analytics". User: an admin account. Permissions: Read (the dashboard only reads data). Click "Generate API key".',
+      },
+      {
+        title: 'Copy the Consumer key & secret',
+        detail:
+          'Copy the Consumer key (starts with ck_) and Consumer secret (starts with cs_). ⚠️ The secret is shown only once — copy it now.',
+      },
+      {
+        title: 'Confirm HTTPS',
+        detail:
+          'The store must be on HTTPS (it is — comefollowmefhe.com). Basic Auth sends the key encoded, so HTTPS is required to keep it safe.',
+      },
+      {
+        title: 'Connect it here',
+        detail:
+          'Connections → WooCommerce (direct API) → Connect. Paste the store URL (https://comefollowmefhe.com), Consumer key, and Consumer secret, then "Test & Save". Green = it becomes the primary source; orders refresh automatically (cached 6h).',
+      },
+      {
+        title: 'If it fails',
+        detail:
+          '404 = pretty permalinks not enabled (step 1). 401 = wrong key/secret or not HTTPS. 403 = key isn’t Read-enabled — regenerate it. "Consumer key is missing" = the host strips the Authorization header (rare; tell us and we’ll switch to query-param auth). Google Sheets keeps running as backup either way.',
+      },
+    ],
+  },
   'google-sheets': {
     slug: 'google-sheets',
     title: 'Connect Google Sheets (order data)',

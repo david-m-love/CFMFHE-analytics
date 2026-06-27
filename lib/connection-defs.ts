@@ -4,6 +4,7 @@
 // config keeps working alongside in-app stored credentials).
 
 export type ConnId =
+  | 'woocommerce'
   | 'sheets'
   | 'shopify'
   | 'klaviyo'
@@ -14,6 +15,7 @@ export type ConnId =
   | 'google_ads'
 
 export const CONNECTION_ORDER: ConnId[] = [
+  'woocommerce',
   'sheets',
   'shopify',
   'klaviyo',
@@ -48,10 +50,28 @@ export interface ConnDef {
 }
 
 export const CONNECTION_DEFS: Record<ConnId, ConnDef> = {
+  woocommerce: {
+    id: 'woocommerce',
+    label: 'WooCommerce (direct API)',
+    description: 'Primary order source for comefollowmefhe.com (Google Sheets is the backup)',
+    setup:
+      'In WordPress: enable pretty permalinks (Settings → Permalinks, any non-Plain option). Then WooCommerce → Settings → Advanced → REST API → Add key, set Permissions to Read, and copy the Consumer key (ck_) and Consumer secret (cs_).',
+    docsSlug: 'woocommerce-rest-api',
+    fields: [
+      { key: 'storeUrl', label: 'Store URL', type: 'text', placeholder: 'https://comefollowmefhe.com' },
+      { key: 'consumerKey', label: 'Consumer key', type: 'text', placeholder: 'ck_…' },
+      { key: 'consumerSecret', label: 'Consumer secret', type: 'password', placeholder: 'cs_…' },
+    ],
+    env: {
+      storeUrl: 'WOOCOMMERCE_STORE_URL',
+      consumerKey: 'WOOCOMMERCE_CONSUMER_KEY',
+      consumerSecret: 'WOOCOMMERCE_CONSUMER_SECRET',
+    },
+  },
   sheets: {
     id: 'sheets',
     label: 'Google Sheets',
-    description: 'Order history from WooCommerce + Shopify',
+    description: 'Backup order source (used if the WooCommerce API is unavailable) + Shopify sheet',
     setup:
       'In Google Cloud, create a service account, enable the Sheets API, and share each sheet with the service-account email (Viewer).',
     docsSlug: 'google-sheets',
