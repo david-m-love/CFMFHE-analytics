@@ -10,10 +10,12 @@ import type { KlaviyoOverview } from '@/lib/klaviyo'
 import { formatNumber } from '@/lib/utils'
 
 const EMPTY: KlaviyoOverview = {
-  totalContacts: 0,
-  newContacts: 0,
+  emailSubscribers: 0,
+  smsSubscribers: 0,
+  newEmail: 0,
+  newSms: 0,
+  emailGrowthPct: 0,
   newPerMonthAvg: 0,
-  growthRatePct: 0,
   monthly: [],
   lists: [],
   capped: false,
@@ -46,34 +48,54 @@ export function EmailDashboard() {
       {note && <p className="mb-3 text-xs text-text-2">{note}</p>}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
-        <KpiCard label="Total Contacts" value={data.totalContacts} format="number" hint="largest list" />
         <KpiCard
-          label="New Contacts"
-          value={data.newContacts}
+          label="Email Subscribers"
+          value={data.emailSubscribers}
+          format="number"
+          hint="opted-in"
+          secondaryValue={data.newEmail}
+          secondaryFormat="number"
+          secondaryLabel="new this period"
+        />
+        <KpiCard
+          label="SMS Subscribers"
+          value={data.smsSubscribers}
+          format="number"
+          hint="opted-in"
+          secondaryValue={data.newSms}
+          secondaryFormat="number"
+          secondaryLabel="new this period"
+        />
+        <KpiCard
+          label="New Subscribers"
+          value={data.newEmail + data.newSms}
           format="number"
           hint="selected period"
-          secondaryValue={data.totalContacts > 0 ? data.growthRatePct : undefined}
+          secondaryValue={data.emailSubscribers > 0 ? data.emailGrowthPct : undefined}
           secondaryFormat="percent"
-          secondaryLabel="list growth"
+          secondaryLabel="email list growth"
         />
         <KpiCard label="Avg New / Month" value={data.newPerMonthAvg} format="number" hint="last 12 mo" />
-        <KpiCard label="Tracked Lists" value={data.lists.length} format="number" />
       </div>
 
       {data.capped && (
         <p className="mt-2 font-mono text-[10px] text-accent-amber">
-          New-contact counts are based on the most recent profiles; very old months may undercount.
+          New-subscriber counts come from the most recent profiles; very old months may undercount.
         </p>
       )}
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-3">
         <Card className="lg:col-span-2">
           <CardHeader className="flex items-center justify-between">
-            <CardTitle>New Contacts Over Time</CardTitle>
+            <CardTitle>New Subscribers Over Time</CardTitle>
             <Badge tone="neutral">last 12 months</Badge>
           </CardHeader>
           <CardBody>
             <SubscribersChart data={data.monthly} />
+            <div className="mt-2 flex gap-4 font-mono text-[10px] text-text-3">
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-accent-green" /> Email</span>
+              <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-accent-purple" /> SMS</span>
+            </div>
           </CardBody>
         </Card>
 

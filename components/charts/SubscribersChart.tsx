@@ -36,9 +36,10 @@ export function SubscribersChart({ data }: { data: SubscriberMonth[] }) {
         />
         <Tooltip
           cursor={{ fill: 'rgba(28,27,24,0.04)' }}
-          content={<ChartTooltip formatter={(v) => `${formatNumber(Number(v))} new`} />}
+          content={<ChartTooltip formatter={(v) => formatNumber(Number(v))} />}
         />
-        <Bar dataKey="count" name="New contacts" fill="#2A7A58" radius={[3, 3, 0, 0]} />
+        <Bar dataKey="email" name="Email" stackId="s" fill="#2A7A58" radius={[0, 0, 0, 0]} />
+        <Bar dataKey="sms" name="SMS" stackId="s" fill="#6B5EA8" radius={[3, 3, 0, 0]} />
       </BarChart>
     </ResponsiveContainer>
   )
