@@ -4,6 +4,7 @@ import { authOptions, authEnabled } from '@/lib/auth'
 import { getKlaviyoOverview } from '@/lib/klaviyo'
 
 export const dynamic = 'force-dynamic'
+export const maxDuration = 60 // first (uncached) build pages Klaviyo sequentially
 
 function today() {
   return new Date().toISOString().slice(0, 10)
