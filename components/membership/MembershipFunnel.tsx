@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { TriangleAlert } from 'lucide-react'
 import {
   useCompareOrders,
@@ -8,9 +8,34 @@ import {
   useOrdersMeta,
 } from '@/lib/use-orders'
 import { useDashboard } from '@/store/dashboard'
-import { STAGE_DEFS, stageValue, type StageKpi } from '@/lib/funnel'
+import { STAGE_DEFS, stageValue, stageIsLive, type StageKpi, type FunnelExternals } from '@/lib/funnel'
 import { useMediaQuery } from '@/lib/use-mobile'
 import { cn, formatNumber, pctDelta } from '@/lib/utils'
+
+interface RangeFetch {
+  ext: FunnelExternals
+  ga4: boolean
+  klaviyo: boolean
+}
+
+/** Pull GA4 sessions/join-us views + Klaviyo new subscribers for a date window. */
+async function fetchExternals(from: string, to: string): Promise<RangeFetch> {
+  const out: RangeFetch = { ext: {}, ga4: false, klaviyo: false }
+  const [ga4, klav] = await Promise.allSettled([
+    fetch(`/api/data/ga4?from=${from}&to=${to}`, { cache: 'no-store' }).then((r) => r.json()),
+    fetch(`/api/data/klaviyo?from=${from}&to=${to}`, { cache: 'no-store' }).then((r) => r.json()),
+  ])
+  if (ga4.status === 'fulfilled' && ga4.value?.status === 'connected' && ga4.value.data) {
+    out.ga4 = true
+    out.ext.reach = ga4.value.data.totals?.sessions
+    out.ext.consider = ga4.value.data.totals?.joinUsSessions
+  }
+  if (klav.status === 'fulfilled' && klav.value?.status === 'connected' && klav.value.data) {
+    out.klaviyo = true
+    out.ext.engage = (klav.value.data.newEmail ?? 0) + (klav.value.data.newSms ?? 0)
+  }
+  return out
+}
 
 function daysBetween(from: string, to: string) {
   return Math.round((new Date(to).getTime() - new Date(from).getTime()) / 86_400_000) + 1
@@ -62,15 +87,51 @@ export function MembershipFunnel() {
   const days = daysBetween(range.from, range.to)
   const cmpSuffix = compareSelect === 'previous_year' ? 'vs LY' : 'vs prev'
 
-  const stages = useMemo(
-    () =>
-      STAGE_DEFS.map((def) => ({
+  const { compareRange } = useDashboard()
+  const [cur, setCur] = useState<RangeFetch>({ ext: {}, ga4: false, klaviyo: false })
+  const [cmp, setCmp] = useState<RangeFetch | null>(null)
+
+  useEffect(() => {
+    let alive = true
+    fetchExternals(range.from, range.to).then((r) => alive && setCur(r))
+    return () => {
+      alive = false
+    }
+  }, [range.from, range.to])
+
+  useEffect(() => {
+    let alive = true
+    if (compareEnabled && compareRange) {
+      fetchExternals(compareRange.from, compareRange.to).then((r) => alive && setCmp(r))
+    } else {
+      setCmp(null)
+    }
+    return () => {
+      alive = false
+    }
+  }, [compareEnabled, compareRange])
+
+  const stages = useMemo(() => {
+    const topThree = (k: string) => k === 'reach' || k === 'consider' || k === 'engage'
+    return STAGE_DEFS.map((def) => {
+      let compareVal: number | null = null
+      if (compare) {
+        if (topThree(def.key)) {
+          // Use real compare-range data only; never compare real vs placeholder.
+          const liveCmp = stageIsLive(def.key, { ga4: cmp?.ga4 ?? false, klaviyo: cmp?.klaviyo ?? false })
+          compareVal = cmp && liveCmp ? stageValue(def.key, compare, cmp.ext) : null
+        } else {
+          compareVal = stageValue(def.key, compare)
+        }
+      }
+      return {
         def,
-        current: stageValue(def.key, orders),
-        compare: compare ? stageValue(def.key, compare) : null,
-      })),
-    [orders, compare],
-  )
+        live: stageIsLive(def.key, { ga4: cur.ga4, klaviyo: cur.klaviyo }),
+        current: stageValue(def.key, orders, cur.ext),
+        compare: compareVal,
+      }
+    })
+  }, [orders, compare, cur, cmp])
 
   const maxV = Math.max(1, ...stages.map((s) => s.current))
   const active = activeIdx != null ? stages[activeIdx] : null
@@ -81,14 +142,33 @@ export function MembershipFunnel() {
 
   return (
     <div>
-      {/* Placeholder note (revenue KPIs now live on the Overview tab) */}
-      <div className="flex items-center gap-2 rounded-md border border-[#e8c84a] bg-[#fff8e6] px-3 py-2 text-xs text-[#7a6010]">
-        <TriangleAlert size={14} className="shrink-0" />
-        <span>
-          <strong>Stages 1–3 are illustrative placeholders</strong> (GA4 + Klaviyo
-          not yet connected). Stages 4–8 use real order data.
-        </span>
-      </div>
+      {/* Data-source status note */}
+      {(() => {
+        const placeholders = stages.filter((s) => !s.live).map((s) => s.def.name)
+        if (placeholders.length === 0) {
+          return (
+            <div className="flex items-center gap-2 rounded-md border border-[#cfe6da] bg-[#eef7f2] px-3 py-2 text-xs text-[#1f6b47]">
+              <span className="h-2 w-2 shrink-0 rounded-full bg-accent-green" />
+              <span>
+                <strong>All stages live.</strong> Reach &amp; Consider from GA4, Engage from Klaviyo,
+                Try → Loyal from order data.
+              </span>
+            </div>
+          )
+        }
+        return (
+          <div className="flex items-center gap-2 rounded-md border border-[#e8c84a] bg-[#fff8e6] px-3 py-2 text-xs text-[#7a6010]">
+            <TriangleAlert size={14} className="shrink-0" />
+            <span>
+              <strong>{placeholders.join(', ')} {placeholders.length === 1 ? 'is an' : 'are'} illustrative
+              placeholder{placeholders.length === 1 ? '' : 's'}</strong>{' '}
+              (connect {placeholders.some((p) => p === 'Reach' || p === 'Consider') ? 'GA4' : ''}
+              {placeholders.includes('Engage') ? `${placeholders.some((p) => p === 'Reach' || p === 'Consider') ? ' + ' : ''}Klaviyo` : ''}).
+              The remaining stages use real data.
+            </span>
+          </div>
+        )
+      })()}
 
       <div className="mt-4 grid grid-cols-1 gap-4 lg:grid-cols-[1fr_320px]">
         {/* Funnel bars */}
@@ -270,16 +350,16 @@ function DetailPanel({
   cmpSuffix,
   compareEnabled,
 }: {
-  stage: { def: (typeof STAGE_DEFS)[number]; current: number; compare: number | null }
+  stage: { def: (typeof STAGE_DEFS)[number]; current: number; compare: number | null; live?: boolean }
   days: number
   cmpSuffix: string
   compareEnabled: boolean
 }) {
   const { def, current, compare } = stage
   const kpis: StageKpi[] = def.kpis(current, compare, days)
-  const statusLabel =
-    def.status === 'live' ? 'Real data available' : 'Placeholder — data needed'
-  const statusColor = def.status === 'live' ? '#2A7A58' : '#C4A030'
+  const live = stage.live ?? def.status === 'live'
+  const statusLabel = live ? 'Real data — live' : 'Placeholder — data needed'
+  const statusColor = live ? '#2A7A58' : '#C4A030'
 
   return (
     <div>

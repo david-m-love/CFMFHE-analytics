@@ -40,17 +40,34 @@ export interface StageDef {
   insights: string[]
 }
 
+/**
+ * Real top-of-funnel inputs from connected sources. When present, they replace
+ * the trial-multiplier placeholders for Reach / Consider / Engage.
+ */
+export interface FunnelExternals {
+  reach?: number // GA4 sessions (website visitors)
+  consider?: number // GA4 /join-us sessions (membership page views)
+  engage?: number // Klaviyo new subscribers (email + SMS)
+}
+
+/** True when a stage is backed by real data (not an illustrative placeholder). */
+export function stageIsLive(key: StageKey, sources: { ga4: boolean; klaviyo: boolean }): boolean {
+  if (key === 'reach' || key === 'consider') return sources.ga4
+  if (key === 'engage') return sources.klaviyo
+  return true // stages 4–8 are order-based and always live
+}
+
 /** Live numeric value for a stage given the orders in a window. */
-export function stageValue(key: StageKey, orders: Order[]): number {
+export function stageValue(key: StageKey, orders: Order[], ext?: FunnelExternals): number {
   const trials = freeTrialStarts(orders)
   const firstPaid = newMembers(orders)
   switch (key) {
     case 'reach':
-      return Math.round(trials * FUNNEL.placeholderMultipliers.reach)
+      return ext?.reach != null ? ext.reach : Math.round(trials * FUNNEL.placeholderMultipliers.reach)
     case 'consider':
-      return Math.round(trials * FUNNEL.placeholderMultipliers.consider)
+      return ext?.consider != null ? ext.consider : Math.round(trials * FUNNEL.placeholderMultipliers.consider)
     case 'engage':
-      return Math.round(trials * FUNNEL.placeholderMultipliers.engage)
+      return ext?.engage != null ? ext.engage : Math.round(trials * FUNNEL.placeholderMultipliers.engage)
     case 'trials':
       return trials
     case 'firstPaid':
@@ -134,13 +151,13 @@ export const STAGE_DEFS: StageDef[] = [
     isRevStage: false,
     desc: 'Total unique visitors to comefollowmefhe.com. The widest part of the funnel.',
     kpis: (v, c, days) => [
-      { label: 'Unique Visitors', value: v.toLocaleString(), sub: `Last ${days} days · Est.`, compareValue: c },
+      { label: 'Sessions', value: v.toLocaleString(), sub: `Last ${days} days`, compareValue: c },
       { label: 'Join Page Views', value: Math.round(v * 0.1).toLocaleString(), sub: '~10% find /join-us · Est.' },
       { label: 'Avg Session', value: '2m 14s', sub: 'Time on site · Est.' },
       { label: 'Bounce Rate', value: '64%', sub: 'Left after 1 page · Est.' },
     ],
     insights: [
-      '<strong>Data needed:</strong> connect GA4 to pull real visitor counts.',
+      '<strong>From GA4</strong> when connected — total website sessions in the period (else illustrative).',
       'The biggest drop in the entire funnel happens here — only ~10% of visitors ever find the membership page.',
     ],
   },
@@ -154,13 +171,13 @@ export const STAGE_DEFS: StageDef[] = [
     isRevStage: false,
     desc: 'Visitors who reached /join-us — the membership landing page. A high-intent action; many site buttons point here.',
     kpis: (v, c, days) => [
-      { label: 'Join Page Views', value: v.toLocaleString(), sub: `Last ${days} days · Est.`, compareValue: c },
+      { label: '/join-us Sessions', value: v.toLocaleString(), sub: `Last ${days} days`, compareValue: c },
       { label: '% of All Traffic', value: '10%', sub: 'Who find the page · Est.' },
       { label: 'CTA Click Rate', value: '18%', sub: 'Clicked Start Free Trial · Est.' },
       { label: 'Avg Time on Page', value: '1m 48s', sub: 'Engaged reading · Est.' },
     ],
     insights: [
-      '<strong>Data needed:</strong> GA4 page-level tracking on /join-us.',
+      '<strong>From GA4</strong> when connected — sessions landing on /join-us (else illustrative).',
       'Visitors who scroll past the pricing section convert at higher rates — scroll-depth tracking recommended.',
     ],
   },
@@ -174,14 +191,14 @@ export const STAGE_DEFS: StageDef[] = [
     isRevStage: false,
     desc: 'Visitors who opted into a freebie or the email list — the first signal of real intent.',
     kpis: (v, c, days) => [
-      { label: 'Email Signups', value: v.toLocaleString(), sub: `Last ${days} days · Est.`, compareValue: c },
+      { label: 'New Subscribers', value: v.toLocaleString(), sub: `Email + SMS · last ${days} days`, compareValue: c },
       { label: 'Conv. from Visitors', value: '2.8%', sub: 'Visitor → email · Est.' },
       { label: 'Top Source', value: 'Popup', sub: 'Free lesson offer' },
       { label: 'Avg Days to Trial', value: '~12', sub: 'Email → trial start · Est.' },
     ],
     insights: [
-      '<strong>Data needed:</strong> Klaviyo list-growth API.',
-      '<strong>Critical gap flagged:</strong> popup signup lists were found to have zero subscribers despite being created — may not be mapping to Klaviyo correctly.',
+      '<strong>From Klaviyo</strong> when connected — new email + SMS subscribers in the period (else illustrative).',
+      'Watch the popup signup lists specifically — they were once found empty; the Email &amp; SMS tab now shows real per-list counts.',
     ],
   },
   {
