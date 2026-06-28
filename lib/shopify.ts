@@ -9,7 +9,7 @@ const LOOKBACK_MONTHS = 18
 
 // Bulk-operation pipeline: orders are cached in KV and refreshed via a GraphQL
 // bulk query (one async job → full history, near-free against the cost bucket).
-const ORDERS_CACHE_KEY = 'shopify:orders:v1'
+const ORDERS_CACHE_KEY = 'shopify:orders:v2' // v2: fixed line-item (__parentId) parsing
 const ORDERS_TTL_MS = 6 * 60 * 60 * 1000
 const BULK_POLL_BUDGET_MS = 45_000 // bounded wait so a page request never hangs
 const BULK_POLL_INTERVAL_MS = 2_500
@@ -205,7 +205,7 @@ function bulkOrdersQuery(): string {
             discountCodes
             sourceName
             customer { firstName lastName numberOfOrders }
-            lineItems { edges { node { title quantity } } }
+            lineItems { edges { node { id title quantity } } }
           } }
         }
       }
@@ -290,11 +290,14 @@ async function parseBulkJsonl(url: string): Promise<Order[]> {
     }
     const id = obj.id as string | undefined
     const parentId = obj.__parentId as string | undefined
-    if (parentId && id?.includes('/LineItem/')) {
+    if (parentId) {
+      // In bulk output, every child record under an order is a line item
+      // (the only nested connection we query). Identify by __parentId, NOT by
+      // id — the line-item node may not carry an id we can match on.
       const arr = lineItems.get(parentId) ?? []
       arr.push({ title: (obj.title as string) ?? '', quantity: Number(obj.quantity) || 1 })
       lineItems.set(parentId, arr)
-    } else if (id?.includes('/Order/')) {
+    } else if (id && id.includes('/Order/')) {
       orderNodes.set(id, obj as GqlOrderNode)
     }
   }
