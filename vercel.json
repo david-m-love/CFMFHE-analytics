@@ -3,5 +3,8 @@
   "framework": "nextjs",
   "buildCommand": "pnpm build",
   "installCommand": "pnpm install",
-  "devCommand": "pnpm dev"
+  "devCommand": "pnpm dev",
+  "crons": [
+    { "path": "/api/cron/warm", "schedule": "0 * * * *" }
+  ]
 }

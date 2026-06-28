@@ -1,11 +1,12 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import { KpiCard } from '@/components/kpi-card'
 import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { SubscribersChart } from '@/components/charts/SubscribersChart'
 import { useDashboard } from '@/store/dashboard'
+import { useCachedData } from '@/lib/use-cached-data'
 import type { KlaviyoOverview } from '@/lib/klaviyo'
 import { formatNumber } from '@/lib/utils'
 
@@ -23,21 +24,11 @@ const EMPTY: KlaviyoOverview = {
 
 export function EmailDashboard() {
   const { range } = useDashboard()
-  const [data, setData] = useState<KlaviyoOverview>(EMPTY)
-  const [note, setNote] = useState<string | undefined>()
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    setLoading(true)
-    fetch(`/api/data/klaviyo?from=${range.from}&to=${range.to}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d?.data) setData(d.data)
-        setNote(d?.note)
-      })
-      .catch(() => {})
-      .finally(() => setLoading(false))
-  }, [range.from, range.to])
+  const { data: d, loading, refreshing, note } = useCachedData<KlaviyoOverview>(
+    `klaviyo:${range.from}:${range.to}`,
+    `/api/data/klaviyo?from=${range.from}&to=${range.to}`,
+  )
+  const data = d ?? EMPTY
 
   if (loading) {
     return <div className="h-40 animate-pulse rounded-lg border border-border bg-card" />
@@ -45,7 +36,12 @@ export function EmailDashboard() {
 
   return (
     <>
-      {note && <p className="mb-3 text-xs text-text-2">{note}</p>}
+      {(refreshing || note) && (
+        <p className="mb-3 flex items-center gap-2 text-xs text-text-2">
+          {refreshing && <RefreshCw size={12} className="animate-spin" />}
+          {refreshing ? 'Updating…' : note}
+        </p>
+      )}
 
       <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
         <KpiCard

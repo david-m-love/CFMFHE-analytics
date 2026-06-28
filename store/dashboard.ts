@@ -18,6 +18,10 @@ interface DashboardState {
   compareSelect: CompareSelect
   compareRange: DateRange | null
 
+  /** Bumped to trigger a re-fetch of live data across the app (manual refresh). */
+  dataVersion: number
+  refreshData: () => void
+
   setQuickSelect: (q: QuickSelect) => void
   setCustomRange: (range: DateRange) => void
   toggleSource: (s: StoreSource) => void
@@ -37,6 +41,9 @@ export const useDashboard = create<DashboardState>()(
       compareEnabled: false,
       compareSelect: 'previous_period',
       compareRange: resolveCompare(initialRange, 'previous_period'),
+
+      dataVersion: 0,
+      refreshData: () => set((s) => ({ dataVersion: s.dataVersion + 1 })),
 
       setQuickSelect: (q) => {
         if (q === 'custom') {
