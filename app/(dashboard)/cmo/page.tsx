@@ -11,6 +11,7 @@ import { Badge } from '@/components/ui/badge'
 import { InfoTip } from '@/components/info-tip'
 import { useFilteredOrders, useOrdersMeta, useStoreOrders } from '@/lib/use-orders'
 import { useDashboard } from '@/store/dashboard'
+import { useCachedData } from '@/lib/use-cached-data'
 import { distinctProductNames } from '@/lib/products'
 import {
   computeCmo,
@@ -41,10 +42,14 @@ export default function CmoPage() {
 
   const [settings, setSettings] = useState<CmoSettings>(DEFAULT_CMO_SETTINGS)
   const [editing, setEditing] = useState(false)
-  const [ads, setAds] = useState<AdSpendData>(EMPTY_ADS)
-  const [adsNote, setAdsNote] = useState<string | undefined>()
   const [map, setMap] = useState<CampaignMap>({})
   const [mapping, setMapping] = useState(false)
+
+  const { data: adsData, note: adsNote, refreshing: adsRefreshing } = useCachedData<AdSpendData>(
+    `ads:${range.from}:${range.to}`,
+    `/api/marketing/ads?from=${range.from}&to=${range.to}`,
+  )
+  const ads = adsData ?? EMPTY_ADS
 
   useEffect(() => {
     fetch('/api/settings/cmo', { cache: 'no-store' })
@@ -56,16 +61,6 @@ export default function CmoPage() {
       .then((d) => d?.map && setMap(d.map))
       .catch(() => {})
   }, [])
-
-  useEffect(() => {
-    fetch(`/api/marketing/ads?from=${range.from}&to=${range.to}`, { cache: 'no-store' })
-      .then((r) => r.json())
-      .then((d) => {
-        if (d?.data) setAds(d.data)
-        setAdsNote(d?.note)
-      })
-      .catch(() => {})
-  }, [range.from, range.to])
 
   const productNames = useMemo(() => distinctProductNames(filtered), [filtered])
   const spendByProduct = useMemo(
@@ -92,7 +87,12 @@ export default function CmoPage() {
       />
 
       <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        {adsNote && <p className="text-xs text-text-2">{adsNote}</p>}
+        {(adsRefreshing || adsNote) && (
+          <p className="flex items-center gap-2 text-xs text-text-2">
+            {adsRefreshing && <Settings2 size={12} className="animate-spin" />}
+            {adsRefreshing ? 'Updating ad data…' : adsNote}
+          </p>
+        )}
         <div className="ml-auto flex gap-2">
           {isAdmin && ads.campaigns.length > 0 && (
             <Button variant="outline" onClick={() => setMapping((v) => !v)}>

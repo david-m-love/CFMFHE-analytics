@@ -87,17 +87,32 @@ export function MembershipFunnel() {
   const days = daysBetween(range.from, range.to)
   const cmpSuffix = compareSelect === 'previous_year' ? 'vs LY' : 'vs prev'
 
-  const { compareRange } = useDashboard()
+  const { compareRange, dataVersion } = useDashboard()
   const [cur, setCur] = useState<RangeFetch>({ ext: {}, ga4: false, klaviyo: false })
   const [cmp, setCmp] = useState<RangeFetch | null>(null)
 
   useEffect(() => {
     let alive = true
-    fetchExternals(range.from, range.to).then((r) => alive && setCur(r))
+    const key = `cfmfhe-cache:funnel-ext:${range.from}:${range.to}`
+    try {
+      const raw = localStorage.getItem(key)
+      if (raw) setCur(JSON.parse(raw))
+    } catch {
+      /* ignore */
+    }
+    fetchExternals(range.from, range.to).then((r) => {
+      if (!alive) return
+      setCur(r)
+      try {
+        localStorage.setItem(key, JSON.stringify(r))
+      } catch {
+        /* ignore */
+      }
+    })
     return () => {
       alive = false
     }
-  }, [range.from, range.to])
+  }, [range.from, range.to, dataVersion])
 
   useEffect(() => {
     let alive = true
@@ -109,7 +124,7 @@ export function MembershipFunnel() {
     return () => {
       alive = false
     }
-  }, [compareEnabled, compareRange])
+  }, [compareEnabled, compareRange, dataVersion])
 
   const stages = useMemo(() => {
     const topThree = (k: string) => k === 'reach' || k === 'consider' || k === 'engage'

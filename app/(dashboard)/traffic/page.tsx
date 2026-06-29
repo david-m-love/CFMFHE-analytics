@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { RefreshCw } from 'lucide-react'
 import {
   CartesianGrid,
   Cell,
@@ -20,7 +20,7 @@ import { Card, CardBody, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { ChartTooltip } from '@/components/charts/ChartTooltip'
 import { useDashboard } from '@/store/dashboard'
-import type { DataEnvelope } from '@/types'
+import { useCachedData } from '@/lib/use-cached-data'
 import type { TrafficData } from '@/lib/ga4'
 import { cn, formatNumber, formatPercent } from '@/lib/utils'
 
@@ -36,38 +36,14 @@ function fmtDuration(sec: number) {
 
 export default function TrafficPage() {
   const { range, compareEnabled, compareRange } = useDashboard()
-  const [data, setData] = useState<TrafficData | null>(null)
-  const [compare, setCompare] = useState<TrafficData | null>(null)
-  const [status, setStatus] = useState<'connected' | 'mock' | 'disconnected'>('mock')
-  const [note, setNote] = useState<string>()
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    let active = true
-    setLoading(true)
-    const main = fetch(`/api/data/ga4?from=${range.from}&to=${range.to}`, { cache: 'no-store' }).then(
-      (r) => r.json() as Promise<DataEnvelope<TrafficData>>,
-    )
-    const cmp =
-      compareEnabled && compareRange
-        ? fetch(`/api/data/ga4?from=${compareRange.from}&to=${compareRange.to}`, { cache: 'no-store' }).then(
-            (r) => r.json() as Promise<DataEnvelope<TrafficData>>,
-          )
-        : Promise.resolve(null)
-    Promise.all([main, cmp])
-      .then(([m, c]) => {
-        if (!active) return
-        setData(m.data)
-        setStatus(m.status as 'connected' | 'mock' | 'disconnected')
-        setNote(m.note)
-        setCompare(c?.data ?? null)
-        setLoading(false)
-      })
-      .catch(() => active && setLoading(false))
-    return () => {
-      active = false
-    }
-  }, [range.from, range.to, compareEnabled, compareRange])
+  const { data, loading, refreshing, note, status } = useCachedData<TrafficData>(
+    `ga4:${range.from}:${range.to}`,
+    `/api/data/ga4?from=${range.from}&to=${range.to}`,
+  )
+  const { data: compare } = useCachedData<TrafficData>(
+    compareEnabled && compareRange ? `ga4:${compareRange.from}:${compareRange.to}` : 'ga4:none',
+    compareEnabled && compareRange ? `/api/data/ga4?from=${compareRange.from}&to=${compareRange.to}` : null,
+  )
 
   const totalSrc = data ? data.sources.reduce((s, x) => s + x.sessions, 0) || 1 : 1
   const maxPage = data ? Math.max(1, ...data.topPages.map((p) => p.sessions)) : 1
@@ -77,7 +53,13 @@ export default function TrafficPage() {
     <>
       <PageHeader title="Traffic" description="Website sessions, sources, and the /join-us path (GA4)." showSource={false} />
 
-      {status !== 'connected' && !loading && (
+      {refreshing && data && (
+        <p className="mb-3 flex items-center gap-2 text-xs text-text-2">
+          <RefreshCw size={12} className="animate-spin" /> Updating…
+        </p>
+      )}
+
+      {status !== 'connected' && status && !loading && (
         <div className="mb-4 flex items-center gap-2 rounded-md border border-[#ecdcc2] bg-[#f6eddf] px-3 py-2 text-xs text-accent-amber">
           <Info size={14} className="shrink-0" />
           {note ?? 'Showing sample traffic data.'}

@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { useEffect, useMemo, useState } from 'react'
+import { useMemo } from 'react'
 import { Info } from 'lucide-react'
 import { PageHeader } from '@/components/page-header'
 import { KpiCard } from '@/components/kpi-card'
@@ -13,9 +13,9 @@ import {
   useStoreOrders,
 } from '@/lib/use-orders'
 import { useDashboard } from '@/store/dashboard'
+import { useCachedData } from '@/lib/use-cached-data'
 import { estimatedMrr, totalRevenue } from '@/lib/metrics'
 import { businessNewVsReturning } from '@/lib/identity'
-import type { DataEnvelope } from '@/types'
 import type { Financials } from '@/lib/quickbooks'
 
 export default function CeoPage() {
@@ -29,25 +29,10 @@ export default function CeoPage() {
   const { range, compareEnabled } = useDashboard()
   const cmp = compareEnabled ? compare : null
 
-  const [fin, setFin] = useState<Financials | null>(null)
-  const [finStatus, setFinStatus] = useState<'connected' | 'mock' | 'disconnected'>('mock')
-  const [finNote, setFinNote] = useState<string>()
-
-  useEffect(() => {
-    let active = true
-    fetch(`/api/data/quickbooks?from=${range.from}&to=${range.to}`, { cache: 'no-store' })
-      .then((r) => r.json() as Promise<DataEnvelope<Financials>>)
-      .then((env) => {
-        if (!active) return
-        setFin(env.data)
-        setFinStatus(env.status as 'connected' | 'mock' | 'disconnected')
-        setFinNote(env.note)
-      })
-      .catch(() => {})
-    return () => {
-      active = false
-    }
-  }, [range.from, range.to])
+  const { data: fin, status: finStatus, note: finNote } = useCachedData<Financials>(
+    `quickbooks:${range.from}:${range.to}`,
+    `/api/data/quickbooks?from=${range.from}&to=${range.to}`,
+  )
 
   const sales = totalRevenue(filtered)
   const mrr = estimatedMrr(filtered)
