@@ -5,6 +5,6 @@
   "installCommand": "pnpm install",
   "devCommand": "pnpm dev",
   "crons": [
-    { "path": "/api/cron/warm", "schedule": "0 * * * *" }
+    { "path": "/api/cron/warm", "schedule": "0 8 * * *" }
   ]
 }
