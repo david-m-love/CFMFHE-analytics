@@ -1,32 +1,38 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { DayPicker, type DateRange as RDPRange } from 'react-day-picker'
 import 'react-day-picker/dist/style.css'
 import { ArrowLeft, ArrowLeftRight, CalendarDays, Check, ChevronDown, X } from 'lucide-react'
 import { useDashboard, type CompareSelect } from '@/store/dashboard'
 import {
-  QUICK_SELECT_LABELS,
+  quickSelectLabel,
+  recentBfcmYears,
+  recentQuarters,
   type QuickSelect,
   formatRangeLabel,
 } from '@/lib/date-ranges'
 import { useMediaQuery } from '@/lib/use-mobile'
 import { cn } from '@/lib/utils'
 
-const QUICK_ORDER: QuickSelect[] = [
+// Rolling presets (newest/most-common first), then "to date", then dynamic
+// Quarters and BFCM weekends. Models Shopify's date picker (sub-day options
+// omitted — order/GA4/Klaviyo data is daily granularity).
+const PRESET_KEYS: QuickSelect[] = [
+  'today',
+  'yesterday',
   'last_7',
-  'last_14',
   'last_30',
-  'last_60',
   'last_90',
-  'this_month',
+  'last_365',
+  'last_week',
   'last_month',
-  'this_quarter',
   'last_quarter',
-  'ytd',
-  'custom',
+  'last_12_months',
+  'last_year',
 ]
+const TO_DATE_KEYS: QuickSelect[] = ['wtd', 'mtd', 'qtd', 'ytd']
 
 const COMPARE_OPTIONS: { value: 'none' | CompareSelect; label: string }[] = [
   { value: 'none', label: 'No comparison' },
@@ -79,6 +85,15 @@ function Sheet({
   )
 }
 
+function SectionLabel({ children }: { children: React.ReactNode }) {
+  return (
+    <div className="flex items-center gap-2 px-3 pb-1 pt-3 font-mono text-[10px] uppercase tracking-wider text-text-3">
+      {children}
+      <span className="h-px flex-1 bg-border" />
+    </div>
+  )
+}
+
 function ListRow({
   label,
   active,
@@ -122,6 +137,10 @@ export function DateRangePicker() {
   const [compareDraft, setCompareDraft] = useState<RDPRange | undefined>()
   const isMobile = useMediaQuery()
   const calMonths = isMobile ? 1 : 2
+
+  const now = useMemo(() => new Date(), [])
+  const quarters = useMemo(() => recentQuarters(now, 4), [now])
+  const bfcm = useMemo(() => recentBfcmYears(now, 4), [now])
 
   useEffect(() => {
     document.body.style.overflow = panel ? 'hidden' : ''
@@ -197,14 +216,23 @@ export function DateRangePicker() {
 
       {panel === 'date' && !calMode && (
         <Sheet title="Date range" onClose={close}>
-          <div className="space-y-0.5">
-            {QUICK_ORDER.map((q) => (
-              <ListRow
-                key={q}
-                label={QUICK_SELECT_LABELS[q]}
-                active={quickSelect === q}
-                onClick={() => chooseQuick(q)}
-              />
+          <div className="max-h-[70vh] space-y-0.5 overflow-y-auto">
+            <ListRow label="Fixed dates…" active={quickSelect === 'custom'} onClick={() => chooseQuick('custom')} />
+            <SectionLabel>Rolling periods</SectionLabel>
+            {PRESET_KEYS.map((q) => (
+              <ListRow key={q} label={quickSelectLabel(q)} active={quickSelect === q} onClick={() => chooseQuick(q)} />
+            ))}
+            <SectionLabel>To date</SectionLabel>
+            {TO_DATE_KEYS.map((q) => (
+              <ListRow key={q} label={quickSelectLabel(q)} active={quickSelect === q} onClick={() => chooseQuick(q)} />
+            ))}
+            <SectionLabel>Quarters</SectionLabel>
+            {quarters.map((o) => (
+              <ListRow key={o.key} label={o.label} active={quickSelect === o.key} onClick={() => chooseQuick(o.key)} />
+            ))}
+            <SectionLabel>Black Friday / Cyber Monday</SectionLabel>
+            {bfcm.map((o) => (
+              <ListRow key={o.key} label={o.label} active={quickSelect === o.key} onClick={() => chooseQuick(o.key)} />
             ))}
           </div>
         </Sheet>
