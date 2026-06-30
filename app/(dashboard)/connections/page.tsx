@@ -291,6 +291,22 @@ function ConnectionEditor({
   const [fields, setFields] = useState<Record<string, string>>({})
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
+  const [copied, setCopied] = useState(false)
+
+  const redirectUri =
+    def.kind === 'oauth' && typeof window !== 'undefined'
+      ? `${window.location.origin}/api/oauth/${def.id}/callback`
+      : ''
+
+  function copyRedirect() {
+    navigator.clipboard?.writeText(redirectUri).then(
+      () => {
+        setCopied(true)
+        setTimeout(() => setCopied(false), 1500)
+      },
+      () => {},
+    )
+  }
 
   async function submit(action: 'save' | 'clear') {
     setSaving(true)
@@ -385,12 +401,25 @@ function ConnectionEditor({
           </div>
         </div>
         {def.kind === 'oauth' && (
-          <a
-            href={`/api/oauth/${def.id}/authorize`}
-            className="mt-3 flex w-full items-center justify-center rounded-md bg-accent-blue px-4 py-2 text-sm font-medium text-white hover:bg-[#335f8a]"
-          >
-            Connect with {def.label}
-          </a>
+          <>
+            <div className="mt-3 rounded-md border border-border bg-paper px-3 py-2">
+              <div className="mb-1 flex items-center justify-between gap-2">
+                <span className="font-mono text-[10px] uppercase tracking-wide text-text-3">
+                  Redirect URI — add this in {def.label}, exactly
+                </span>
+                <button onClick={copyRedirect} className="shrink-0 text-[11px] font-medium text-accent-blue hover:underline">
+                  {copied ? 'Copied ✓' : 'Copy'}
+                </button>
+              </div>
+              <code className="block break-all font-mono text-[11px] text-ink">{redirectUri}</code>
+            </div>
+            <a
+              href={`/api/oauth/${def.id}/authorize`}
+              className="mt-3 flex w-full items-center justify-center rounded-md bg-accent-blue px-4 py-2 text-sm font-medium text-white hover:bg-[#335f8a]"
+            >
+              Connect with {def.label}
+            </a>
+          </>
         )}
         <p className="mt-2 font-mono text-[10px] text-text-3">
           {def.kind === 'oauth'

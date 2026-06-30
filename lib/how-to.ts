@@ -83,8 +83,9 @@ export const GUIDES: Record<string, Guide> = {
     estimate: '~10 minutes',
     steps: [
       { title: 'Create an Intuit app', detail: 'Go to developer.intuit.com → sign in → My Apps → Create an app → choose the QuickBooks Online Accounting scope.' },
-      { title: 'Copy keys', detail: 'In the app’s "Keys & credentials" (use the Production keys when you’re ready for live data), copy the Client ID and Client Secret.' },
-      { title: 'Add the redirect URI', detail: 'In the app settings, add this exact Redirect URI: https://cfmfhe-analytics.vercel.app/api/oauth/quickbooks/callback' },
+      { title: 'Pick ONE environment (Dev or Production)', detail: 'Intuit apps have separate "Development" and "Production" keys, and EACH has its own Client ID/Secret AND its own Redirect URIs list. Use the same environment for both steps below — mixing them is the #1 cause of "redirect_uri is invalid". Use Production for real company data.' },
+      { title: 'Copy keys', detail: 'On the "Keys & credentials" tab for your chosen environment, copy the Client ID and Client Secret — those are what you paste into the dashboard.' },
+      { title: 'Add the redirect URI — EXACTLY', detail: 'On that SAME Keys & credentials tab, under "Redirect URIs", click Add and paste the value the dashboard shows in the Connect dialog (use its Copy button), e.g. https://cfmfhe-analytics.vercel.app/api/oauth/quickbooks/callback — then SAVE. It must match exactly: https (not http), no trailing slash, lowercase. If you saved Development keys, the redirect URI must be on the Development tab (and vice versa).' },
       { title: 'Save the keys here', detail: 'In this dashboard: Connections → QuickBooks Online → Connect. Paste the Client ID & Secret and click "Test & Save".' },
       { title: 'Authorize', detail: 'Click "Connect with QuickBooks", sign in to Intuit, pick the company, and approve. You’ll come back here connected.' },
       { title: 'View it', detail: 'Open the CEO dashboard to see cash balance and money in / money out.' },
